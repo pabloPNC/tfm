@@ -1,0 +1,138 @@
+---
+title: "04_AUC_indexes"
+author: "Pablo Navarro Carpio"
+date: "2024-08-07"
+output: html_document
+---
+
+# 1. Importar librerias
+
+```{r Importar librerías}
+library(biomaRt)
+library(dplyr)
+library(tidyr)
+```
+
+# 2. Importar datos
+
+Para esta sección utilizaremos el conjunto de datos generado anteriormente. El conjunto de datos contiene los niveles de expresión para distintas muestras de tejido además de las variables relevantes para hacer las predicciones. De la misma forma, importaremos los marcadores seleccionados provenientes de las células cancerosas.
+
+```{r Importar datos}
+markers_cluster_8 <- readRDS("./rds_objects/02_markes_cluster_8.rds")
+tcga_data <- readRDS("./rds_objects/03_roc_data.rds")
+```
+
+# 3. Selección de genes de interés
+
+El conjunto de datos contiene contiene información para 60664 genes en 554 muestras distintas. Estas datos han sido extraídos utilizando técnicas de secuenciación masiva, por lo que los datos representan un promedio de las células en cada muestra. Esto puede añadir cierto ruido al estudio, puesto que en la muestra existirán diversos tipos celulares, algunos de los cuales no serán de nuestro interés.
+
+Dado que anteriormente hemos identificado DEG de células cancerosas de protata, podemos centrar el análisis en ellos. De esta forma podremos asegurarnos que estaremos trabajando con genes relevantes en nuestras células de estudio.
+
+## 3.1. Equivalencias entre identificadores
+
+Los marcadores de las células y los datos utilizan distintos identificadores, por lo que tendremos que transformarlos buscando equivalencias. Esta tarea la podemos realizar utilizando el paquete `biomaRt`. Este paquete nos permite acceder a diversos portales de información, entre ellos se encuentra [Ensembl](https://www.ensembl.org/index.html) el cual utiliza estos identificadores.
+
+En primer lugar utilizaremos la función `biomaRt::useEnsembl` para seleccionar la base de datos a la que queremos acceder, en este caso `genes` y el conjunto de datos a utilizar, `hsapiens_gene_ensembl`, es decir genes en humanos.
+
+```{r Búsqueda de equivalencias para los identificadores}
+ensembl <- useEnsembl(
+    biomart = "genes",
+    dataset = "hsapiens_gene_ensembl"
+)
+```
+
+La función preparará la configuración necesaria para que podamos conectarnos con ENsembl y realizar una consulta a la base de datos. A continuación, tendremos que indicar la consulta a realizar, para ello usaremos la función `biomaRt::getBM`. Las consultas nos permiten identificar una serie de atributos, para este caso, necesitaremos el nombre del gen (`hgnc_symbol`), el identificador que le da Ensemble (`ensembl_gene_id`) y los posibles nombre alternativos para dicho gen (`external_synonym`).
+
+```{r Ejecutando la consulta}
+query_results <- getBM(
+    attributes = c(
+        "hgnc_symbol",
+        "ensembl_gene_id",
+        "external_synonym"
+    ),
+    mart = ensembl
+)
+```
+
+En la función hemos especificado el parámetro `mart`, que simplemente requiere el objeto con la configuración antes generada. La función permite especificar filtros y valores especificos para recibir resultados más concretos. Habitualmente serían de utilidad, pero dado que para nuestro caso necesitaremos filtrar los resultados con una lógica algo más compleja, no los usaremos y aplicaremos los filtrados propios más tarde.
+
+Obtenidos los resultados de la consulta, deberemos comprobar que todos los genes se encuentran en los resultados, de forma que podamos asignarles un id. En primer lugar, compactaremos la columna de los nombres de los genes y de los sinónimos en una sola de forma que podamos acceder a las equivalencias de forma más sencilla.
+
+```{r Tabla de equivalencias}
+id_equivalences <- query_results %>%
+    pivot_longer(
+        cols = !ensembl_gene_id,
+        names_to = "type",
+        values_to = "acronym"
+    ) %>% distinct()
+```
+
+Realizando la intersección (`dplyr::intersect`) y la diferencia de los conjuntos de genes (`dplyr::setdiff`), podemos encontrar respectivamente los genes que se han encontrado y los genes que faltan.
+
+```{r Genes encontrados y no encontrados}
+missing_genes <- setdiff(markers_cluster_8$gene, id_equivalences$acronym)
+finded_genes <- intersect(markers_cluster_8$gene, id_equivalences$acronym)
+```
+
+Una exploración de dichos genes en la base de datos, revela una posible explicación a porqué no se han encontrado. Tomando como ejemplo el caso de **RP11-356O9.1**, una búsqueda en ensamblados del genoma anteriores ([GRCh37.p13](https://grch37.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=ENSG00000258414;r=14:38033252-38048330;t=ENST00000554829)), permiten identificarlo por su nombre, sin embargo en casos posteriores ([GRCh38.p14](https://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000258414)) no existe nombre para dicho gen.
+
+Actualmente el campo del nombre para estos genes se corresponde al otorgado por [HUGO Gene Nomenclature Committee](https://www.genenames.org/). En caso de que un gen no haya recibido todavía un acrónimo, podemos encontrar identificadores que no posean todavía un nombre. De la misma forma, puede darse el caso de correcciones de errores, es decir genes inicialmente identificados como distintos se combinan en una sola entrada cuando se descubre que puede tratarse del mismo, como sucede también en este caso.
+
+De esta forma, dado que para incluir correcciones más recientes usaremos el ensamblado más reciente (GRCh38.14), no consideraremos estos genes, a fin de evitar posibles errores.
+
+## 3.2. Filtrado por los genes identificados
+
+Una vez seleccionados los genes de interés, obtendremos el subconjunto de los datos de interés. Para ello en primer lugar añadiremos a la tabla de marcadores los identificadores.
+
+```{r Genes filtrados}
+finded_markers <- markers_cluster_8 %>%
+    filter(gene %in% finded_genes) %>%
+    left_join(id_equivalences, by = join_by(gene == acronym))
+```
+
+Creada la nueva colmuna podemos comprobar que obtenemos un mayor número de entradas del esperado.
+
+```{r Entradas duplicadas}
+finded_markers %>%
+    group_by(ensembl_gene_id) %>%
+    filter(n() > 1) %>%
+    arrange(ensembl_gene_id)
+```
+
+Esto se debe a que habrán casos en los que:
+
++ El sinónimo y nombre del gen sean iguales, introduciendo duplicados
++ El sinónimo y nombre del gen son distintos, introduciendo dos entradas
+
+Para solventar esta redundancia de información, en caso de encontrar identificadores duplicados, nos quedaremos con aquel que se corresponda con el nombre del gen, en lugar de con su sinónimo.
+
+```{r Filtrado de duplicados}
+filtered_markers <- finded_markers %>%
+    group_by(ensembl_gene_id) %>%
+    filter((n() == 1) | (type == "hgnc_symbol"))
+```
+
+De la misma forma, podemos encontrar genes que presentan 2 id diferentes de ensemble. Sin embargo, esta duplicidad no nos afectará, puesto que aunque un mismo gen utilice diferentes identificadores de ensemble, las entradas tendrán los mismo niveles de expresión. Además, con esta duplicidad podemos asegurarnos de que los identificadores coincidan con los del TCGA.
+
+Filtrados los marcadores, podremos seleccionar los genes del conjunto de datos extraido del TCGA.
+
+```{r TCGA subsetting}
+filtered_tcga_data <- tcga_data %>%
+    select(
+        contains(filtered_markers$ensemble_gene_id)
+    )
+```
+
+
+# 4. Cálculo de AUCs
+
+## 4.1. Introducción
+
+En la literatura, 2 de las aproximaciones estadísticas más usadas para evaluar y comparar el rendimiento de una función o clasificador binario han sido las curvas $ROC$ (Característica Operativa del Receptor) y el área bajo dichas curvas ($AUC$).
+
+El principal objetivo de un clasificador binario es discrimar instancias con una condición de interés de aquellas que no lo posean. Su precisión viene determianada por 2 métricas: su sensibilidad y su especificidad o la tasa verdaderos positivos ($TPR = Sensitivity$) y la tasa de falsos positivos ($FPR = 1 - Specificity$).
+
+Cuando se trabaja con marcadores continuos, estos pueden ser dicotomizados en instancias positivas y negativas seleccionando una de las puntuaciones del marcador como un punto de corte, o umbral de decisión. Las curva $ROC$ representa los valores de $TPR$ y $FPR$ para cada uno de los umbrales de decisión de un marcador. Dado que estos puntos se calculan para todo un rango de umbrales, el $AUC$ actúa como una métrica global, mostrando los intercambios entre ambos parámetros de la curva, la ganancia o perdida de una métrica frente a otra.
+
+
+

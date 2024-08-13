@@ -1,0 +1,364 @@
+---
+title: "Luminal Cell selection"
+author: "Pablo Navarro Carpio"
+date: "23/07/2024"
+output: html_document
+---
+
+# 1. Importar librerias y datos
+
+```{r Librerias}
+library(Seurat)
+library(dplyr)
+library(purrr)
+```
+
+El primer paso será importar los datos, es decir las matrices de cuentas. Para ello utilizaremos la función `data.table::fread` que permite una lectura rápida de archivos de gran tamaño. Después asignaremos la primera columna, con los nombres de las variables, al nombre de las filas utilizando la función `rownames`. Finalmente con la función `dplyr::select` podremos eliminar esta columna.
+
+En este caso contaremos con dos conjuntos de datos provenientes de 2 pacientes distintos que más adelante integraremos.
+
+```{r Importar el dataset}
+import_gene_counts <- function(file, data_table = FALSE) {
+    count_matrix <- data.table::fread(file, data.table = data_table)
+    rownames(count_matrix) <- count_matrix[[1]]
+    count_matrix <- select(count_matrix, -(1))
+    count_matrix
+}
+
+GSM4773522_PCa2_counts_matrix <- import_gene_counts(
+    "./GSE157703_RAW/GSM4773522_PCa2_gene_counts_matrix.txt",
+    data_table = FALSE
+)
+
+GSM4773522_PCa1_counts_matrix <- import_gene_counts(
+    "./GSE157703_RAW/GSM4773521_PCa1_gene_counts_matrix.txt",
+    data_table = FALSE
+)
+```
+
+# 2. Preprocesamiento y CQ
+
+## 2.1. Creación del objeto Seurat
+
+Para realizar el análisis utilizaremos el paquete `Seurat`, el cual proveerá de las herramientas necesarias para llevar a cabo la selección de marcadores así como selección de células de interés.
+
+Antes de proceder al análisis de los datos, es recomendable realizar un control de calidad de las celulas. Hay diversas [métricas descritas por la comunidad](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4758103/), pero las que se van a tener en cuenta aqui serán:
+
+1. **Número de genes únicos en cada célula**
+    + Las celulas de baja calidad o gotas vacias tienen pocos genes
+    + Los multipletes tienen una alta cantidad de celulas
+1. **Número de moléculas en una célula**
+    + Correlacionado con la cantidad de genes unicos
+1. **Porcentaje de reads mapeados al genoma mitocondrial**
+    + Las células de baja calidad/muertas tienen una gran expresión de contaminación mitocondrial
+
+`Seurat` permite realizar este preprocesamiento durante la creación del objeto principal. En nuestro caso, filtraremos aquellos genes que se hayan expresado en menos de 3 células (`min.cells = 3`) y las células que hayan expresado menos de 200 genes distintos (`min.features = 200`).
+
+La función para crear el objeto (`CreateSeuratObject`), utilizará las matrices de cuentas creadas en el apartado anterior y opcionalmente un identificador (`project`) que en nuestro caso utilizaremos para indicar el paciente del que provienen.
+
+```{r Creación de objetos Seurat y filtrado}
+seurat_object_1 <- CreateSeuratObject(
+    counts = GSM4773522_PCa1_counts_matrix,
+    min.cells = 3,
+    min.features = 200,
+    project = "Patient1"
+)
+
+seurat_object_2 <- CreateSeuratObject(
+    counts = GSM4773522_PCa2_counts_matrix,
+    min.cells = 3,
+    min.features = 200,
+    project = "Patient2"
+)
+```
+
+Aunque partamos de los datos de 2 pacientes distintos, dado que cada célula tienen asignada su propio identificador además del paciente del que proviene, podemos combinar ambos objectos en uno solo.
+
+Para fusionarlos podemos utilizaremos la función `merge` que combinará ambos objetos en 1 solo.
+
+```{r Combinando objetos}
+seurat_objects <- merge(seurat_object_1, seurat_object_2)
+```
+
+Ahora realizaremos el filtrado de células según su ratio de transcripción mitocondrial. En este caso, mayor a $0.4$. `Seurat` no ofrece por defecto una forma de llevar a cabo este filtrado, sin embargo, sí permite el cálculo de nuevas métricas.
+
+Para crear esta nueva métrica utilizaremos la función `PercentageFeatureSet`, que calcula el porcentaje de cuentas que pertenecen a un determinado subgrupo de rasgos(genes) en cada célula. En el conjunto de datos, los genes pertenecientes al genoma mitocondrial están nombrados usando las letras "MT" como iniciales, lo que utilizaremos para indicar el subgrupo de genes en la función con el argumento `pattern`.
+
+```{r Cálculo del porcentaje de reads de genoma mitocondrial}
+seurat_objects[["percent.mt"]] <- PercentageFeatureSet(
+    seurat_objects,
+    pattern = "^MT-"
+)
+```
+
+Una vez generada la última métrica realizaremos el filtrado utilizando la función `subset`. Con ella, nos quedaremos con el subconjunto de los datos que cumplan con las condiciones especificadas.
+
+```{r Filtrado por porcentaje mitocondrial}
+seurat_objects <- subset(
+    seurat_objects,
+    subset = percent.mt < 4
+)
+```
+
+## 2.2. Normalización
+
+Hasta ahora hemos trabajado con los datos en crudo, sin embargo, a partir de ahora es conveniente trabajar con datos normalizados. La normalización nos permite asegurar que la heterogeneidad en nuestro conjunto de datos, se deba solamente a differencias biologicas y no a otras, como por ejemplo sesgos técnicos.
+
+Por ello, utilizaremos la función la función `Seurat::NormalizeData` con el argumento `normalization.method = "LogNormalize"`. La función aplicará un escalado global: para cada célula, dividirá el número de cuentas de cada gen entre el número total de cuentas. Finalmente aplicará una trasformación logarítmica a los resultados.
+
+```{r Normalización}
+seurat_objects <- NormalizeData(
+    seurat_objects,
+    normalization.method = "LogNormalize"
+)
+```
+
+# 3. Búsqueda de genes de alta variabilidad
+
+A continuación se buscarán los genes que presenten una mayor variabilidad, es decir que estén muy expresados en algunas células y poco en otras. La búsqueda de estos genes, y su uso en el análisis aguas abajo, facilita (la identificación de patrones de interés)[https://www.nature.com/articles/nmeth.2645], por ello los usaremos en los siguientes pasos.
+
+Para seleccionar estos genes utilizaremos la funcion `Seurat::FindVariableFeatures`. La función requiere, además del objeto seurat, que indiquemos un número de variables a seleccionar (`nfeatures`), por lo que para nuestro caso seleccionaremos arbitrariamente $2000$.
+
+```{r Búsqueda de variables}
+seurat_objects <- FindVariableFeatures(
+    seurat_objects,
+    selection.method = "vst",
+    nfeatures = 2000
+)
+```
+
+Las variables seleccionadas pueden visualizarse utilizando `Seurat::VariableFeaturePlot` en función de su media y varianza. Para mayor claridad, los 10 primeros genes mostrarán su nombre en la gráfica.
+
+```{r Visualización de las variables}
+high_variable_genes <- head(VariableFeatures(seurat_objects), 10)
+high_variable_genes_plot <- VariableFeaturePlot(seurat_objects)
+LabelPoints(
+    plot = high_variable_genes_plot,
+    points = high_variable_genes,
+    repel = TRUE
+)
+```
+
+# 4. Escalado de los datos
+
+Antes de aplicar técnicas de reducción de la dimensionalidad, es conveniente aplicar un escalado y centrado de los datos. Esto es necesario puesto que este tipo de técnicas son sensibles a conjuntos de datos que tienen escalas muy dispares. De esta forma un gen que habitualmente esté muy expresado no tendrá más peso en el análisis posterior.
+
+Seurat provee la función `Seurat::ScaleData`, que realizará este centrado y escalado. Por defecto la función hará que la expresión media en todas las celulas sea 0 y su varianza igual a 1. Finalmente, en nuestro caso, indicaremos que los cálculos solo se realicen sobre los genes de alta variabilidad (`features`), puesto que serán las que utilizaremos a continuación.
+
+```{r Escalado}
+seurat_objects <- ScaleData(
+    seurat_objects,
+    features = VariableFeatures(seurat_objects)
+)
+```
+
+# 5. Reducción de la dimensionalidad
+
+Como el conjunto de datos tiene un alto número de variables, es conveniente aplicar técnicas de reducción de la dimensionalidad para trabajar con ellos. Por esta razón realizaremos un análisis de componentes principales (PCA) sobre los datos escalados, usando los genes de mayor variabilidad.
+
+Para ello utilizaremos la función `Seurat::RunPCA` indicando los genes de mayor variabilidad.
+
+```{r PCA}
+seurat_objects <- RunPCA(
+    seurat_objects,
+    features = VariableFeatures(seurat_objects)
+)
+```
+
+# 6. Integración de datos
+
+## 6.1. Objetivos de la integración
+
+La integracion de datos en scRNA-seq permite emparejar tipos celulares de distintos conjuntos de datos. Esto permite mejorar el poder estadístico e incluso hacer comparativas entre distintos conjuntos datos.
+
+Aunque en nuestro caso nos centraremos en el primero, algunos de los objetivos que podemos lograr con este tipo de análisis son:
+    + Indentificar subpoblaciones de celulas presentes en ambos datasets
+    + Comparar marcadores especificos de tipos celulares conservados en células control y tratadas
+    + Comparar conjuntos de datos para encontrar respuesta a un tratamiento
+
+## 6.2. Integración
+
+Existen diversos métodos que podemos utilizar para integrar nuestros datos, pero en nuestro caso utilizaremos el análisis de correlación canónica (CCA).
+
+A la hora de aplicar este método, Seurat trabaja sobre un espacio de baja dimensión, en otras palabras utilizará las componentes originadas en el PCA para generar unas corregidas. Esta correción, capturará las fuentes de variación entre ambas muestras de forma que las células del mismo tipo se agruparán.
+
+Para realizar la integración utilizaremos la función `Seurat::IntegrateLayers`, indicando el nombre de la nueva reducción (`new.reduction`), la reducción a corregir (`orig.reduction`) y el método a utilizar (`method = CCAIntegration`)
+
+```{r Integración}
+seurat_objects <- IntegrateLayers(
+    seurat_objects,
+    method = CCAIntegration,
+    orig.reduction = "pca",
+    new.reduction = "integrated.cca"
+)
+```
+
+Una vez hemos realizado la integración, podemos juntar ambos datasets para proseguir los análisis aguas abajo. Seurat realiza este paso internamente con la función `Seurat::JoinLayers`.
+
+```{r Unir layers}
+seurat_objects <- JoinLayers(
+    seurat_objects
+)
+```
+
+## 6.3. Dimensionalidad del conjunto de datos
+
+Los conjuntos de datos de scRNA-seq presentan mucho ruido, es por ello entre otros motivos por los que se trabaja tratando de reducir la dimensionalidad.
+
+Las componentes producidas contienen información conjuntos de variables correlacionadas. De esta forma, las primeras componentes representan una compresión más robusta del conjunto de datos en su totalidad.Sin embargo, hay que considerar cuantas componentes se deben incluir en el análisis posterior.
+
+Existen disintos métodos para averiguar la 'dimensionalidad' del conjunto de datos. Un método heuristico comúnmente utilizado, 'el método del codo', el cual consiste en representar la variación explicada en función del número de componentes. Seurat provee la función `Seurat::ElbowPlot` que automatiza este proceso.
+
+```{r Método del codo}
+ElbowPlot(seurat_objects, ndims = 50)
+```
+
+Otra forma de visualizar esta heterogeneidad de los datos es a través de mapas de calor de las componentes principales. Seurat permite automatizar este proceso a través de la función `Seurat::DimHeatmap`.
+
+```{r Mapas de calor}
+DimHeatmap(
+    seurat_objects,
+    dims = 1:21,
+    cells = 500,
+    balanced = TRUE
+)
+```
+
+Después de observar los gráficos podemos ver que la variación por componente empieza a disminuir a partir de la componente número 10. Aún así, escoger menos componentes de lo ideal puede tener efectos adversos en los resultados finales. Por esta razón, escogeremos hasta la componente 20, donde se observa que el descenso de la variación es más pronunciado.
+
+# 7. Agrupamiento de células
+
+Una vez hemos seleccionado las dimensiones que vamos a utilizar, el siguiente paso consistirá en agrupar las células del experimento. El primer paso será construir un grafo con los K vecinos más cercanos (KNN) utilizando las dimensiones que hemos seleccionado previamente. Para este primer paso, utilizaremos la función `Seurat::FindNeighbors`.
+
+```{r K vecinos más cercanos}
+seurat_objects <- FindNeighbors(
+    seurat_objects,
+    dim = 1:20,
+    reduction = "integrated.cca"
+)
+```
+
+El segundo paso, será una optimización del paso anterior para finalmente agrupar las células en distintos clusters. Para automatizar este paso, Seurat provee de la función `Seurat::FindClusters`. La función permite utilizar el parámetro de `resolution` para controlar la granularidad del agrupamiento. Para nuestro rango de células utilizar valores entre 0.4 y 1.2 suele devolver buenos resultados. De forma arbitraria, en nuestro caso utilizaremos una resolución de 0.8.
+
+```{r Búsqueda de cluster}
+seurat_objects <- FindClusters(
+    seurat_objects,
+    resolution = 0.8
+)
+```
+
+# 8. Reducción de la dimensionalidad no lineal (UMAP)
+
+## 8.1. Utilidad del UMAP
+
+Las técnicas de reducción de dimensionalidad no lienales pueden mostrar relaciones en los datos subyacentes. De esta forma las células que sean similares deberían estar agrupadas.
+
+Para este caso utilizaremos la técnica de UMAP para visualizar las células. Sin embargo, hay que tener en consideración sus limitaciones: el método preserva las distancias locales del conjunto de dato, pero no preserva relaciones de mayor escala.
+
+En otras palabras, las células que sean muy similares deberían aparecer próximas, sin embargo no será posible hacer conclusiones puesto que relaciones de mayor escala se estarán perdiendo.
+
+## 8.2. UMAP
+
+Podemos aplicar un UMAP con la función `Seurat::RunUMAP` indicando las dimensiones que utilizaremos (`dims`) y la redución de la dimensionalidad que queremos que utilice (`reduction`) 
+
+```{r UMAP}
+seurat_objects <- RunUMAP(
+    seurat_objects,
+    dims = 1:20,
+    reduction = "integrated.cca"
+)
+```
+
+## 8.3. Visualización del UMAP
+
+Para visualizar una dimensión generada podemos utilizar la función `Seurat::DimPlot`, en la cual solo se ha de indicar la reducción que se quiere mostrar (`reduction`), en este caso el UMAP.
+
+```{r Visualización del UMAP}
+DimPlot(
+    seurat_objects,
+    reduction = "umap",
+    label = TRUE
+)
+```
+
+# 9. Búsqueda de genes expresados diferencialmente (DEG)
+
+Finalmente una vez se han identificado los grupos de células, podemos buscar que genes están expresados diferencialmente en cada uno de ellos.
+
+Seurat ofrece la función `Seurat::FindAllMarkers` que busca los genes muy o poco expresados en cada cluster con respecto al resto de células.
+
+```{r DEG en clusters}
+all_markers <- FindAllMarkers(
+    seurat_objects
+)
+```
+
+La función devuelve una tabla con las siguientes columnas:
++  **p_val**. Valor p para el gen del grupo en el que se encuentra al usar un test de Suma de rangos de Wilcoxon.
++  **avg_log2FC**. El log fold-change entre los dos grupos. El primer grupo se corresponderá con el cluster, el segundo con el resto de células que no pertecen a él.
++  **pct.1**. El porcentaje de células en el cluster que expresa el gen
++  **pct.2**. El porcentaje de células que expresan el gen, que no pertenecen al cluster.
++  **p_val_adj**. El valor p ajustado por la corrección de Bonferroni usando todos los genes del conjunto de datos.
+
+# 10. Selección de células
+
+## 10.1. Filtrado de resultados significativos
+
+Una vez hemos obtenido los genes expresados diferencialmente y los clusters a los que pertenecen, podemos analizar los resultados. El primer paso es el más evidente, y es filtrar los resultados no significativos. 
+
+Dado que en este caso se están realizando un gran número pruebas utilizaremos el valor p ajustado por la corrección de Bonferroni, de esta forma se filtrarán los resultados que no tengan $\text{p valor} \le 0.05$. Para hacer este filtrado utilizaremos la función `dplyr::filter`.
+
+```{r Filtrado por valores p}
+filtered_markers <- all_markers %>%
+    filter(p_val_adj <= 0.05)
+```
+
+Una vez seleccionados los más significativos, se pueden examinar los resultados.
+
+## 10.2. Identificación de clusters
+
+Realizado el agrupamiento de células así como la identificación de los marcadores diferencialemente expresados, podemos tratar de identificar los tipos celulares que se corresponden con los distintos clusters.
+
+En este caso se está trabajando con muestras de prostrata provenientes de pacientes con cáncer, por lo que el siguiente paso consistirá en seleccionar aquellas células cuyo tipo celular sea el del objetivo de estudio.
+
+En otros [estudios](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2424224/) se han reportado marcadores genéticos de células luminales de prostata, las contribuidoras principales al desarrollo del tumor y de la enfermedad. Los principales marcadores de este tipo de células son "Keratin 8" (KRT8) y "Keratin 18" (KRT18), por lo podemos explorar si alguno de los clusters expresa estos genes.
+
+```{r Identificación de clusters}
+filtered_markers %>%
+    filter(gene == "KRT18" | gene == "KRT8") %>%
+    arrange(desc(avg_log2FC), desc(avg_log2FC))
+```
+
+Al ordenar los resultados por su `avg_log2FC` y `pct.1`, podemos ver que tanto KRT8 y KR18 se expresan en los mismos clusters. En particular, en los clusters 8 y 14, los genes se encuentran en un alto porcentaje de células del cluster y con niveles de expresión relativamente altos en contraste con el resto. Para el caso del cluster 7, podemos observar que el porcentaje de células que expresan los genes es mucho menor, y aunque presenten niveles de expresión ligeramente superiores a los del cluster 8, no los seleccionaremos al presentar un porcentaje de expresión detectable tan bajo.
+
+Estos resultados pueden observarse de forma gráfica utilizando la función `Seurat::FeaturePlot` indicando los genes que se que quieren mostrar.
+
+```{r Feature plot de KRT8 y KRT18}
+FeaturePlot(
+    seurat_objects,
+    feature = c("KRT8", "KRT18")
+)
+```
+
+De esta forma podemos deducir que estos 3 clusters se corresponden con células luminales y por tanto serán nuestro objeto de estudio. Finalmente, podemos seleccionar aquellas células pertenecientes a estos clusters para analizarlas en pasos posteriores.
+
+```{r Selección de clusters}
+luminal_object <- subset(
+    seurat_objects,
+    idents = c(8, 14)
+)
+```
+
+Una vez seleccionados los clusters, se guardará el objeto Seurat y los para seguir utilizándolo posteriormente.
+
+```{r Serialización del objeto}
+saveRDS(
+    object = luminal_object,
+    file = "./rds_objects/01_luminal_object.rds"
+)
+
+saveRDS(
+    object = filtered_markers,
+    file = "./rds_objects/01_significative_markers.rds"
+)
+```

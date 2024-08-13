@@ -1,0 +1,271 @@
+---
+title: "TCGA processing"
+author: "Pablo Navarro Carpio"
+date: "04/08/2024"
+output: html_document
+---
+
+# 1. Importar librerias
+
+```{r Importar librerías}
+library(readr)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(tidyr)
+library(forcats)
+```
+
+# 2. Importar datos
+
+Para esta sección trabajaremos con los datos obtenidos de The Cancer Genome Atlas (TCGA). Los datos ya han sido descargados y se encuentran en el directorio "./tcga_data".
+
+En ella podemos encontrar distintos archivos que utilizaremos para hacer el procesamiento de los datos:
+
++ *clinical*. Directorio que contienen distintos archivos con metadatos sobre los donantes del tejido. En su interior encontraremos el fichero `clinical.tsv` con variables de interés para el trabajo.
++ *gdc_download*. Directorio que contiene distintos directorios, cada uno de ellos con un archivo. Este archivo contiene las lecturas para una muestra de tejido.
++ *gdc_sample_sheet*. Un fichero `tsv`que contiene información sobre los archivos descargados. En su mayoría contiene identificadores de las muestras y archivos que hemos descargado, el tipo de experimento, tipo de tumor, etc. Es de utilidad en su mayoría para relacionar otros archivos de metadatos con su respectiva muestra.
+
+## 2.1. Preprocesamiento del archivo clinical y gdc_sample_sheet
+
+Dado que estamos trabajando con un gran número de archivos de distinto tipo, datos y metadatos, podemos simplificar la tarea uniendo los archivos de metadatos en un solo fichero, es decir `clinical.tsv` y `gdc_sample_sheet.tsv`.
+
+Esta tarea se ha realizado con el script de python `tcga_metadata_processing.py`. La razón principal por la que este paso se ha realizado con un script de Python, es simplemente que los pasos realizados usan una sintaxis más simple en este lenguaje. Esta es una decisión arbitraria dado que estos pasos también se habrían podido realizar en R.
+
+En cualquier caso, los pasos realizados por el script han sido los siguientes:
+
+1. Lectura e importación de los archivos de metadatos
+1. Renombrar las columnas: Sustituir los espacios por "_" y poner en minúscula, para evitar posibles problemas y que ambas utilicen el mismo estilo.
+1. Selección de las variables clínicas de interés (Puntuación de Gleason primaria y secundaria) e identificadores de las muestras
+1. Unión de los archivos utilizando como clave los identificadores de cada paciente ("case_id" y "case_submitter_id")
+1. Eliminar muestras donde las variables de interés no estén descritas (NA)
+1. Transformación de las variables de interés
+    + Transformación a tipo numérico
+    + Calculo de nuevas variables (Puntuación de Gleason)
+    
+Una vez realizados estos pasos, el archivo `file_clinical_sheet.csv` es generado, el cual contiene las información necesaria de cada archivo que hemos descargado (ids, tipo de muestra) así como las variables clínicas del paciente al que corresponde la muestra. Así podemos en primer lugar, seleccionar las rutas que utilizaremos en el procesado.
+
+```{r Rutas}
+tcga_data_folder <- "./tcga_data/gdc_download_20240611_200434.803317"
+file_clinical_path <- "./file_clinical_sheet.csv"
+```
+
+# 3. Creación de matriz de cuentas
+
+Como se ha explicado en el apartado anterior, estamos trabajando con una gran número de archivos. Para el caso de los metadatos, los archivos se han combinado en uno solo para facilitar su acceso a ellos. Se puede realizar un procedimiento similar con cada uno de los archivos de datos, pero para ello debemos entender la estructura de estos.
+
+Los archivos con los que estamos trabajando, tienen 6 primeras líneas dan una serie de métricas y el nombre de las variables de los datos. Tras ello, tendremos distintas filas cada una de ellas representando un gen con sus valores para el resto de variables.
+
+```
+# gene-model: GENCODE v36
+gene_id	gene_name	gene_type	unstranded	stranded_first	stranded_second	tpm_unstranded	fpkm_unstranded	fpkm_uq_unstranded
+N_unmapped			1242436	1242436	1242436			
+N_multimapping			2589737	2589737	2589737			
+N_noFeature			1331220	16814349	16833920			
+N_ambiguous			3211136	753902	752634			
+ENSG00000000003.15	TSPAN6	protein_coding	2743	1379	1364	72.3539	20.8836	20.1004
+ENSG00000000005.6	TNMD	protein_coding	12	5	7	0.9728	0.2808	0.2702
+ENSG00000000419.13	DPM1	protein_coding	745	398	347	73.8513	21.3158	20.5164
+```
+## 3.1. Importar archivos de lecturas
+
+Conociendo su estructura, podemos comenzar a procesar los datos. El primer paso, correspondería con importar estos datos, para ello podemos definir la siguiente función.
+
+```{r Importar datos}
+to_tsv <- function(file_path) {
+    column_names <- c("gene_id", "gene_name", "gene_type", "unstranded",
+                      "stranded_first", "stranded_second", "tpm_unstranded",
+                      "fpkm_unstranded","fpkm_uq_unstranded")
+    counts <- read_tsv(file_path, skip = 6, col_names = FALSE, show_col_types = FALSE)
+    colnames(counts) <- column_names
+    return(counts)
+}
+```
+
+La función simplemente lee el archivo de la ruta introducida (`file_path`), omite las 6 primeras líneas e importa los datos utilizando un tabulador como elemento de separación. Tras ello simplemente re-asigna el nombre de las columnas y devuelve la matriz generada.
+
+## 3.2. Selección de variables y renombrado
+
+Una vez podemos importar un conjunto de datos, podemos decidir que variables utilizar. 
+
++ *gene_id* y *gene_name*. Indican el acrónimo para el gen y su identificador. En nuestro caso, utilizaremos el identificador.
++ *gene_type*. Da una pequeña descripción del tipo de gen con el que se trata.
++ *unstranded*. Número de lecturas que se alinean con dicho sin tener en cuenta la cadena de ADN.
++ *stranded_first* y *stranded_second* Número de lecturas que se alinean a una hebra de ADN y su complementaria
++ *tpm_unstranded*, *fpkm_unstranded* y *fpkm_uq_unstranded*. Respectivamente, Transcritos por millón, Fragmentos por kilobase por millón de lecturas y Cuartil superior de FPKM.
+
+En nuestro caso nos interesa poder identificar el gen, por lo que utilizaremos su identificador. Con respecto a las métricas, se plantea la cuestión de si utilizar lecturas `unstranded` o `paired` (`stranded_first` y `stranded_second`). Habitualmente las segundas se suelen utilizar para experimentos donde es relevante conocer la hebra de la que proviene un transcrito, por ejemplo para el [descubrimiento **de novo** de transcritos o estudio de isoformas](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0881-8#Sec2), como no es nuestro caso utilizaremos las primeras.
+
+Una segunda cuestión se plantea: usar las lecturas en crudo o normalizadas. Las lecturas normalizadas que se presentan aquí, pueden ser útiles cuando comparamos la expresión de distintos genes, puesto que normalizan parámetros que pudieran influir (e.g. la longitud del transcrito y tamaño de librería). Pero además teniendo en cuenta que vamos a utilizar muestras de distinto origen, sería más conveniente utilizar la métrica Transcritos por millón (TPM), puesto que esta, además se considera más adecuada cuando [trabajamos con muestras de diferentes origenes](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0881-8#Sec13). La razón de esto se observa en la fórmula de ambas:
+
+$$
+C_g = \text{Número de lecturas alineadas al gen } g \\
+L_g = \text{Longitud del gen } g \\
+N = \text{Número total de genes}
+$$
+
+$$FPKM = \dfrac{C_g*10^9}{(\sum^N_{i=1} C_i)L_g}$$
+$$TPM = \dfrac{(C_g*10^3/L_g)*10^6}{\sum^N_{i=1}(C_i*10^3/L_i)}$$
+Los TPM normalizan las diferencias en la composición de los transcritos en el denominador en lugar de simplemente dividir por el número de lecturas en la librería. Es decir, normaliza las cuentas para cada gene dividido por la longitud de cada uno en lugar de con el número total de cuentas.
+
+Habiendo seleccionado las variables que utilizaremos, definimos esta función para automatizar el proceso.
+
+```{r Selección de variables}
+rename_col <- function(data, sample_id) {
+    
+    count <- data %>%
+        dplyr::rename("{ sample_id }" := tpm_unstranded) %>%
+        dplyr::select(gene_id, all_of(sample_id))
+    return(count)
+}
+```
+
+La función simplemente utilizará como entrada una matriz de cuentas y un nombre indicado. Esta renombrará la columna `unstranded` al nombre que especifiquemos (más adelante usaremos el id de la muestra) y seleccionará dicha columna junto con la que contiene los identificadores de los genes.
+
+## 3.3. Unión de archivos
+
+A pesar de que podamos procesar cada uno de los datos individualmente, sería conveniente juntarlos en una sola matriz, donde cada una de las columnas representase las cuentas de un gen de una muestra y las filas indicasen el gen para el que se están realizando los conteos.
+
+Por ello podemos utilizar la siguiente función que unirá dos matrices utilizando como clave el identificador de los genes (`gene_id`). Es decir, si hay genes identificados en una segunda matriz que no están en la primera, se añadirá una nueva fila para dicho gen. En caso de que ya exista dicho gen, se añadirán las cuentas en la fila adecuada para la nueva columna.
+
+De esta forma, podemos automatizar la creación de nuevas filas y columnas en lugar de hacerlo de forma manual.
+
+```{r Unión de matrices de cuentas}
+join_count_matrices <- function(count_matrix_a, count_matrix_b) {
+    full_join(
+        count_matrix_a,
+        count_matrix_b,
+        by = c("gene_id"), keep = FALSE
+    )
+}
+```
+
+## 3.4. Construcción de la matriz de cuentas
+
+Las funciones que hemos creado funcionan de forma individual para una sola matriz o a lo sumo 2, cuando las unimos. Sin embargo podemos utilizar estas funciones para que se apliquen a una serie de ellas en su lugar.
+
+```{r Procesado de los archivos de cuentas}
+transform_counts <- function(file_path, sample_id) {
+    count_matrix <- to_tsv(file_path) %>%
+        rename_col(sample_id)
+    return(count_matrix)
+}
+
+file_clinical <- as.data.frame(read_csv(file_clinical_path, col_names = TRUE))
+file_clinical <- file_clinical %>% mutate(full_path = str_c(tcga_data_folder, file_id, file_name, sep = "/"))
+
+count_matrices <- map2(file_clinical$full_path, file_clinical$sample_id, transform_counts, .progress = T)
+```
+
+La función `transform_counts` simplemente combinará las funciones que se han creado para importar los datos, renombrar y seleccionar las columnas. Tras ello leeremos la tabla de datos que se creó al principio. En ella tenemos tanto el nombre del directorio y archivo de cada muestra, con ellos podemos crear una nueva columna que se corresponda con la ruta del archivo combinando la ruta del directorio con los datos del TCGA (`tcga_data_folder`), el subdirectorio (`file_id`) y el nombre del archivo (`file_name`).
+
+Finalmente la función `map2` recorrerá esta serie de rutas y nombres de las muestras y se las pasará a la función `transform_counts`, guardando cada una de las matrices de cuentas generadas para una muestra en un elemento de una lista.
+
+Ahora con la función `reduce`, podremos aplicar la función `join_count_matrices` de forma que tras haberse aplicado a las 2 primeras, el resultado se calcule con la siguiente y así sucesivamente hasta que solamente tengamos 1 matriz producto de la unión de todas.
+
+```{r Unión de matrices}
+merged_matrices <- as.data.frame(purrr::reduce(count_matrices, join_count_matrices))
+rownames(merged_matrices) <- merged_matrices$gene_id
+```
+
+# 4. Preparación de la matriz
+
+En pasos subsiguientes necesitaremos realizar una serie de cálculos sobre la matriz, por ello se necesitará que está cumpla lo siguiente:
+
+1. Los genes deben encontrarse en las columnas de la matriz
+1. Debemos tener una variable binaria, que represente la variable a predecir (e.g. si la muestra se ha obtenido de un paciente enfermo o no)
+
+## 4.1. Pivotado de la matriz
+
+Una vez hemos creado la matriz de cuentas, tendremos para realizar los cálculos sobre ella. Idealmente, deberemos tener los genes en las columnas y los casos (muestras) en las filas.
+
+Para ello utilizaremos las funciones `pivot_longer` y `pivot_wider`. La primera compactará todas las columnas menos la indicada (`gene_id`), de forma que creará una columna llamada `sample` que se corresponderá con los nombres de las columnas anteriores y `counts` con el valor que le correspondía a cada una de ellas.
+
+La salida de dicha función se pasa a la función `pivot_wider` que actua de forma similar, pero esta vez añadiendo más columnas. En este caso, se creará una columna por cada uno de los genes. Los nombres para las columnas los extraerá de `gene_id` y los valores (las cuentas) de la columna `counts`.
+
+```{r Pivotado de la matriz}
+pivoted_matrix <- merged_matrices %>%
+    pivot_longer(
+        cols = !gene_id,
+        names_to = "sample",
+        values_to = "counts"
+    ) %>%
+    pivot_wider(
+        names_from = gene_id,
+        values_from = counts
+    )
+```
+
+De esta forma, logramos que los genes se encuentren en la parte de las columnas y cada entrada se corresponda con la muestra de un paciente.
+
+## 4.2. Cálculo de Gold Standards
+
+Una vez se ha transformado la matriz, se pueden incluir las variables a predecir, es decir aquellas que representen el patrón que sucede en la realidad, es decir los "Gold Standards". En nuestro caso utilizaremos variables binarias, que nos permitan evaluar los genes seleccionados como sus predictores.
+
+Estas variables se establecerán a partir de la puntuación de Gleason, por lo que el primer paso será incluirla en la matriz. Como el orden de las muestras es el mismo en la matriz que en la tabla de metadatos, podemos incluir la columna sin mayor dificultad.
+
+```{r Incluir puntuación de Gleason}
+pivoted_matrix[["gleason_score"]] <- file_clinical[["gleason_score"]]
+```
+
+Una vez se han incluido las puntuaciones de gleason, podemos generar las demás variables. En primer lugar agruparemos las muestras en función de la malignidad del tumor basándonos en su puntuación:
+
++ Por debajo de 6 podríamos considerar cáncer de bajo grado. En nuestro caso, todos los tejidos en este rango serán tejidos sanos.
++ Puntuaciones de 6 y 7 se considerarían de grado medio. En nuestro caso nos referiremos a ellos con malignidad baja.
++ Puntuaciones de 8 o superior se corresponde con cáncer de grado alto. En nuestro caso nos referiremos a ellos con malignidad alta.
+
+```{r Asignando malignidad a las muestras}
+pivoted_matrix <- pivoted_matrix %>%
+    mutate(
+        malignancy = case_when(
+            gleason_score >= 8 ~ "High Malignancy",
+            gleason_score == 6 | gleason_score == 7 ~ "Low Malignancy",
+            gleason_score <= 5 ~ "Normal"
+        )
+    )
+```
+
+Con esta función se creará la variable `malignancy`, que clasificará las muestras en `Normal`, `Low Malignancy` y `High Malignancy` según la puntuación que tengan. Sin embargo, tenemos que trabajar con variables binarias, por lo que requeriremos de transformaciones adicionales. 
+
+En primer lugar, trataremos de buscar marcadores de diagnóstico. Marcadores de este tipo, deberían ser capaces de distinguir de un paciente sano de uno enfermo. Por ello, compactaremos tejidos de alta y baja malignidad en simplemente enfermos.
+
+```{r Asignando tejidos enfermos}
+pivoted_matrix <- pivoted_matrix %>%
+    mutate(
+        disease = fct_collapse(
+            malignancy,
+            "0" = "Normal", 
+            "1" = c("High Malignancy", "Low Malignancy")
+        )
+    )
+```
+
+La función `fct_collapse` permite colapsar niveles de un factor de forma manual. En este caso, crearemos una variable `disease` que tomará como valores 0 (sano), para los valores de malignidad `Normal` y 1 (enfermo), para los valores de malignidad `Low Malignancy` y `High Malignancy`.
+
+En segundo lugar, trataremos de buscar marcadores de pronóstico. Marcadores de este tipo, deberían ser capaces de distinguir de un paciente en el cual la enfermedad es menos probable que avance (e.g. cáncer de crecimiento lento y menos agresivo, baja malignidad) frente a otros donde es más probable que avance (e.g. cáncer de crecimiento rápido, alta malignidad).
+
+En este caso realizaremos un procedimiento similar, pero en este caso los valores de la nueva variable (`prognostic`) de 0 se corresponderán con `Low Malignancy` y de 1 con `High Malignancy`.
+
+```{r Asignando pronósticos}
+pivoted_matrix <- pivoted_matrix %>%
+    mutate(
+        prognostic = fct_collapse(
+            malignancy,
+            "0" = "Low Malignancy",
+            "1" = "High Malignancy"
+        )
+    )
+```
+
+Debemos de tener en cuenta que en este caso, solo hay que trabajar con pacientes enfermos, sin embargo, todavía se encuentran en el conjunto de datos. A la hora de realizar los cálculos, estos deberían filtrarse.
+
+Una vez hemos generado la matriz con los genes y las variables a predecir, guardaremos el conjunto de datos para usarlo más tarde.
+
+```{r Serialización del objecto}
+saveRDS(
+    object = pivoted_matrix,
+    file = "./rds_objects/03_roc_data.rds"
+)
+```
+
+
