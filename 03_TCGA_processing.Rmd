@@ -112,7 +112,6 @@ Habiendo seleccionado las variables que utilizaremos, definimos esta función pa
 
 ```{r Selección de variables}
 rename_col <- function(data, sample_id) {
-    
     count <- data %>%
         dplyr::rename("{ sample_id }" := tpm_unstranded) %>%
         dplyr::select(gene_id, all_of(sample_id))
@@ -264,7 +263,7 @@ Una vez hemos generado la matriz con los genes y las variables a predecir, guard
 ```{r Serialización del objecto}
 saveRDS(
     object = pivoted_matrix,
-    file = "./rds_objects/03_roc_data.rds"
+    file = "./rds_objects/03_tcga_data.rds"
 )
 ```
 
