@@ -128,7 +128,8 @@ filtered_tcga_data <- tcga_data %>%
         \(x) str_replace(x, "\\..*$", "")
     ) %>%
     select(
-        contains(filtered_markers$ensembl_gene_id)
+        contains(filtered_markers$ensembl_gene_id) |
+        c("sample", "gleason_score", "disease", "malignancy", "prognostic")
     )
 ```
 
