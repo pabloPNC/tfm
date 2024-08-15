@@ -1,0 +1,81 @@
+---
+title: "05_AUC_indexes"
+author: "Pablo Navarro Carpio"
+date: "2024-08-14"
+output: html_document
+---
+
+# 1. Importar librerías y datos
+
+```{r Importar librerías}
+library(pROC)
+library(purrr)
+library(dplyr)
+library(forcats)
+```
+
+Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cancer.
+
+```{r Importar datos}
+roc_data <- readRDS("./rds_objects/04_filtered_tcga_data.rds")
+```
+
+# 2. AUCs
+
+## 2.1. Introducción
+
+En la literatura, 2 de las aproximaciones estadísticas más usadas para evaluar y comparar el rendimiento de una función o clasificador binario han sido las curvas $ROC$ (Característica Operativa del Receptor) y el área bajo dichas curvas ($AUC$).
+
+El principal objetivo de un clasificador binario es discrimar instancias con una condición de interés de aquellas que no lo posean. Su precisión viene determianada por 2 métricas: su sensibilidad y su especificidad o la tasa verdaderos positivos ($TPR = Sensitivity$) y la tasa de falsos positivos ($FPR = 1 - Specificity$).
+
+Cuando se trabaja con marcadores continuos, estos pueden ser dicotomizados en instancias positivas y negativas seleccionando una de las puntuaciones del marcador como un punto de corte, o umbral de decisión. Las curva $ROC$ representa los valores de $TPR$ y $FPR$ para cada uno de los umbrales de decisión de un marcador. Dado que estos puntos se calculan para todo un rango de umbrales, el $AUC$ actúa como una métrica global, mostrando los intercambios entre ambos parámetros de la curva, la ganancia o perdida de una métrica frente a otra.
+
+## 2.2. Cálculo de AUCs para diagnostico
+
+Una vez se ha comprendido la teoría, podemos proceder a realizar los cálculos. Para ello utilizaremos el la función `pROC::auc`, que calcula dicho parámetro utilizando una la variable para hacer la predicción (`predictor`) y una variable que contenga la respuesta a dicha predicción (`response`).
+
+Dado que en nuestro caso, buscaremos repetir el proceso para cada una de las variables utilizaremos la función `purrr::map_dbl`.
+
+```{r Cálculo de AUCs para diagnóstico.}
+auc_diagnostic <- map_dbl(
+    roc_data %>% select(-c("sample", "gleason_score", "malignancy", "disease", "prognostic")),
+    auc,
+    response = roc_data$disease,
+    direction = "<",
+    quiet = TRUE,
+    .progress = TRUE
+)
+```
+
+La función iterará sobre las columnas de los predictores y aplicará la función sobre cada uno de ellos. Como en este caso, buscaremos comprobar su validez como marcadores de diagnóstico, seleccionaremos la variable `disease` como la variable de respuesta.
+
+## 2.3. Cálculo de AUCs para pronóstico
+
+De forma similar a la anterior sección, podemos calcular que marcadores será mejores predictores con respecto a establecer un pronóstico para la enfermedad.
+
+Esta sección requerirá de un filtrado previo, puesto que nuestro conjunto de datos contiene entradas de tanto tejidos sanos como enfermos, y para pronóstico, solo nos interesarán aquellos con la enfermedad. Para ello filtraremos los casos en los que se presenta la enfermedad y como estabamos trabajando con factores eliminaremos aquellos que no se utilizan (`Normal`).
+
+```{r Filtrado de casos enfermos}
+disease <- roc_data %>% filter(disease == 1)
+disease[["prognostic"]] <- fct_drop(disease[["prognostic"]])
+```
+
+Una vez realizado el filtrado, podemos realizar el mismo procedimiento.
+
+```{r Cálculo de AUCs para pronóstico}
+auc_prognostic <- map_dbl(
+    disease %>% select(-c("sample", "gleason_score", "malignancy", "disease", "prognostic")),
+    auc,
+    response = disease$prognostic,
+    direction = "<",
+    quiet = TRUE,
+    .progress = TRUE
+)
+```
+# 3. pAUC
+
+## 3.1. Introducción
+
+En determinadas ocasiones 
+
+
