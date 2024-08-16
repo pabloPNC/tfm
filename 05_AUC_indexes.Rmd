@@ -30,15 +30,19 @@ El principal objetivo de un clasificador binario es discrimar instancias con una
 
 Cuando se trabaja con marcadores continuos, estos pueden ser dicotomizados en instancias positivas y negativas seleccionando una de las puntuaciones del marcador como un punto de corte, o umbral de decisión. Las curva $ROC$ representa los valores de $TPR$ y $FPR$ para cada uno de los umbrales de decisión de un marcador. Dado que estos puntos se calculan para todo un rango de umbrales, el $AUC$ actúa como una métrica global, mostrando los intercambios entre ambos parámetros de la curva, la ganancia o perdida de una métrica frente a otra.
 
-## 2.2. Cálculo de AUCs para diagnostico
+## 2.2. Cálculo de AUCs para diagnóstico
 
 Una vez se ha comprendido la teoría, podemos proceder a realizar los cálculos. Para ello utilizaremos el la función `pROC::auc`, que calcula dicho parámetro utilizando una la variable para hacer la predicción (`predictor`) y una variable que contenga la respuesta a dicha predicción (`response`).
 
 Dado que en nuestro caso, buscaremos repetir el proceso para cada una de las variables utilizaremos la función `purrr::map_dbl`.
 
-```{r Cálculo de AUCs para diagnóstico.}
+```{r Cálculo de AUCs para diagnóstico}
+diagnostic_dataset <- roc_data %>% select(
+    -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
+    )
+
 auc_diagnostic <- map_dbl(
-    roc_data %>% select(-c("sample", "gleason_score", "malignancy", "disease", "prognostic")),
+    diagnostic_dataset,
     auc,
     response = roc_data$disease,
     direction = "<",
@@ -63,8 +67,12 @@ disease[["prognostic"]] <- fct_drop(disease[["prognostic"]])
 Una vez realizado el filtrado, podemos realizar el mismo procedimiento.
 
 ```{r Cálculo de AUCs para pronóstico}
+prognostic_dataset <- disease %>% select(
+    -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
+    )
+
 auc_prognostic <- map_dbl(
-    disease %>% select(-c("sample", "gleason_score", "malignancy", "disease", "prognostic")),
+    prognostic_dataset,
     auc,
     response = disease$prognostic,
     direction = "<",
@@ -76,6 +84,52 @@ auc_prognostic <- map_dbl(
 
 ## 3.1. Introducción
 
-En determinadas ocasiones 
+En ciertos contextos el estudio de la curva ROC en su totalidad no es de interés. En aplicaciones médicas y en otros campos, suelen seleccionarse ciertos rangos de la curva debido al interés por unos valores concretos de $TPR$ o $FPR$.
 
+Por ejemplo en un contexto de diagnóstico, un marcador con un bajo $FPR$ (alta especifidad) es relevante a la hora de confirmar la presencia de una condición ("rule in"), dado que es muy improbable que se de un falso positivo. Mientras que un marcador con un alto $TPR$ (alta sensibilidad) es relevante para descartar la presencia de una condición ("rule out"), dado que es muy improbable que se de un falso negativo.
+
+En estas situaciones el area parcial de la curva ROC ($pAUC$) atrae mucha más atención, ya que esta métrica sintetiza la información en la región de interés en lugar de en toda la curva.
+
+## 3.2. Cálculo de pAUCs en regiones de alta especificidad
+
+Explicada la importancia de trabajar en regiones concretas, podemos transladar la explicación a nuestro caso.
+
+Un [diagnóstico temprano del cáncer de próstata](https://academic.oup.com/biostatistics/article/12/2/369/279985) es de gran importancia. En esta situación el pronóstico de un paciente puede mejorar en gran medida. 
+
+Sin embargo, el tratamiento para estas enfermedades es agresivo y debe considerarse. En este caso diagnósticar a un paciente con la enfermedad cuando no la tiene, puede ser un caso muy grave. Dada la situación es conveniente reducir estos casos, es decir el número de falsos positivos, por lo que requeriremos de una alta especificidad.
+
+Para trabajar en condiciones de alta especificidad, seleccionaremos arbitrariamente rangos de $TPR$ contenidos en un intervalo de $(0.9,1)$. Para realizar estos cálculos utilizaremos de nuevo la función `pROC::auc` esta vez indicando que se limite a la especificidad (`partial.auc.focus = "spec"`) y sobre un rango concreto (`partial.auc = c(0.9, 1)`).
+
+```{r Cálculo de pAUC en especificidad para diagnóstico}
+pauc_sp_diagnostic <- map_dbl(
+    diagnostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "spec",
+    response = roc_data$disease,
+    direction = "<",
+    quiet = T,
+    .progress = T
+)
+```
+
+De forma similar, el pronóstico determinado para un paciente es relevante a la hora de seleccionar un tratamiento más o menos agresivo. Podríamos pensar de forma similar al escenario del caso de diagnóstico, un falso positivo puede tener consecuencias graves. Por ello consideraremos también condiciones de alta especificidad para la determinación de un pronóstico.
+
+```{r Cálculo de pAUC en especificidad para pronóstico}
+pauc_sp_prognostic <- map_dbl(
+    prognostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "spec",
+    response = disease$prognostic,
+    direction = "<",
+    quiet = T,
+    .progress = T
+)
+```
+
+
+## 3.3. Cálculo de pAUCs en regiones de alta sensibilidad
+
+De forma similar al caso anterior podemos tratar de trasladar nuestro caso al ejemplo. 
 
