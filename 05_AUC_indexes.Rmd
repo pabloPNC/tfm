@@ -131,5 +131,34 @@ pauc_sp_prognostic <- map_dbl(
 
 ## 3.3. Cálculo de pAUCs en regiones de alta sensibilidad
 
-De forma similar al caso anterior podemos tratar de trasladar nuestro caso al ejemplo. 
+De forma similar al caso anterior podemos trasladar el caso de estudio a condiciones de alta sensibilidad. Escenarios donde se require una alta sensibilidad vienen dados normalmente por enfermedades que son fatales si no es tratan. Cometer un falso negativo puede implicar la muerte del paciente.
+
+Hacer un mal pronóstico del paciente puede suponer graves consecuencias, por lo que a la hora de realizarlo puede ser importante considerar una alta sensibilidad. De modo que para calcular los índices, simplemente realizaremos el procedimiento anterior indicando que utilizaremos la sensibilidad (`partial.auc.focus = "sens"`).
+
+```{r Cálculo de pAUC en sensibilidad para pronóstico}
+pauc_sn_prognostic <- map_dbl(
+    prognostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "sens",
+    response = disease$prognostic,
+    direction = "<",
+    quiet = T,
+    .progress = T
+)
+```
+Finalmente y aunque quizá menos interesante desde el punto de vista clínico, pero también podríamos considerar relevante un contexto de alta sensibilidad para el diagnóstico de la enfermedad. Como hemos explicado antes, un diagnóstico temprano puede ser relevante en relación a evitar la muerte del paciente, por ello también podría llegar a considerarse este índice.
+
+```{r Cálculo de pAUC en sensibilidad para diagnóstico}
+pauc_sn_diagnostic <- map_dbl(
+    diagnostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "sens",
+    response = roc_data$disease,
+    direction = "<",
+    quiet = T,
+    .progress = T
+)
+```
 
