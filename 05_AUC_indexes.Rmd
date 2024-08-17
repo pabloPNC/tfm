@@ -12,6 +12,7 @@ library(pROC)
 library(purrr)
 library(dplyr)
 library(forcats)
+library(tibble)
 ```
 
 Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cancer.
@@ -161,4 +162,38 @@ pauc_sn_diagnostic <- map_dbl(
     .progress = T
 )
 ```
+# 4. Índices derivados de pAUC
+
+## 4.1. Problemas del pAUC
+
+Aunque el $pAUC$ puede ser útil para trabajar en regiones de ínteres en la curva $ROC$ no está libre de fallas.
+
+Este índice ha sido cuestionado por la falta de interpretabilidad, ya que algunos marcadores que puedan presentar altos valores para $AUC$ e incluso que rinden bien en las zonas seleccionadas, presentan valores de $pAUC$ muy ceracnos a 0.
+
+Podemos comprobarlo con, por ejemplo, los 10 valores más altos de $AUC$ en marcadores de diagnóstico trabajando con alta especificidad.
+
+```{r Comparación entre AUCs y pAUCs}
+enframe(auc_diagnostic) %>%
+    arrange(desc(value)) %>%
+    left_join(
+        enframe(pauc_sp_diagnostic),
+        join_by(name == name)
+    ) %>%
+    rename(
+        auc = value.x,
+        pauc = value.y
+    ) %>%
+    .[0:10,]
+```
+
+Como podemos observar, los valores obtenidos para $pAUC$ no superan el $0.5$; valor límite en el $AUC$ con el que consideraríamos que un clasificador rinde igual que un clasificador completamente aleatorio.
+
+Además de por su interpretabilidad la métrica presenta problemas cuando dos marcadores presentan valores iguales para el $pAUC$ pero sus curvas $ROC$ se cruzan, [imposibilitando el decidir cual de los 2 clasificadores rinde mejor](https://onlinelibrary.wiley.com/doi/full/10.1002/bimj.201400023).
+
+Para lidiar con estos problemas se han desarrollado diferentes transformaciones en los diversos índices: tanto en especificidad como en sensibilidad.
+
+
+
+
+
 
