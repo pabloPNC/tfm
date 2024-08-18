@@ -13,6 +13,7 @@ library(purrr)
 library(dplyr)
 library(forcats)
 library(tibble)
+library(ROCpAI)
 ```
 
 Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cancer.
@@ -203,7 +204,7 @@ Esta transformación trabaja con sobre un rango concreto de especificidad $(FPR_
 El límite superior para el área que engloba el $pAUC$, esta definida por el rectángulo formado por los puntos: $(FPR_1, 0), (FPR_2, 0), (FPR_1, 1)$ y $(FPR_2, 1)$. Mientras que el límite inferior está definido por el trapecio con puntos: $(FPR_1, 0), (FPR_2, 0), (FPR_1, FPR_1)$ y $(FPR_2, FPR_2)$. Este será el trapecio que coincide con la diagonal de la curva. Si calculamos las áreas de los límites, el área $(A)$ que puede tomar el $pAUC$ está definida de la siguiente forma:
 
 $$ 
-1(FPR_2 - FPR_1)(FPR_2 + FPR_1) \le A \le FPR_2 - FPR_1
+\dfrac{1}{2}(FPR_2 - FPR_1)(FPR_2 + FPR_1) \le A \le FPR_2 - FPR_1
 $$
 Realizando la siguiente tranformación:
 
@@ -231,7 +232,7 @@ spauc_sp_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de SpAUC para pronóstico}
+```{r Cálculo de SpAUC para pronóstico, warning=FALSE}
 spauc_sp_prognostic<- map_dbl(
     prognostic_dataset,
     auc,
@@ -247,6 +248,80 @@ spauc_sp_prognostic<- map_dbl(
 ```
 
 ### 4.2.2. TpAUC
+
+Para solventar los problemas que el $SpAUC$ todavía presenta, [Vivo et al. han propuesto](https://link.springer.com/article/10.1007/s11634-017-0295-9) un índice alternativo para rangos especificidades concretos, el "tighter partial area index" $TpAUC$. Este nuevo índice, encuentra nuevos límites todavía más ajustados y teniendo en cuenta la forma que puede adoptar la curva $ROC$, es decir, siendo compatible con curvas que pasan por debajo de la diagonal o son inadecuadas.
+
+Los límites iniciales propuestos por este índice parten de los establecidos por el $SpAUC$:
+
+$$
+\dfrac{1}{2}(FPR_2 - FPR_1)(FPR_2 + FPR_1) \le A \le FPR_2 - FPR_1
+$$
+Sin embargo, Vivo et al. proponen que estos límites se pueden ajustar a las regiones del area parcial donde esté definida la curva. Es decir, ajustandose a los puntos de la curva presentes en la región de interes, donde $TPR_i = TPR(FPR_i)$ para $i = 1,2$. De esta forma los límites se ajustan a:
+
+$$
+TPR_1(FPR_2 - FPR_1) \le A \le TPR_2(FPR_2-FPR_1)
+$$
+
+Este índice inferior se ajusta incluso cuando las curvas son inadecuadas en el límite inferior. De esta forma, cuando las curvas son adecuadas y no presentan ganchos, la siguiente expresión puede utilizarse:
+
+$$
+\text{max}\left\{TPR_1(FPR_2 - FPR_1), \dfrac{1}{2}(FPR_2 - FPR_1)(FPR_2 + FPR_1)\right\} \le A \le TPR_2(FPR_2-FPR_1)
+$$
+
+Finalmente, se debe considerar que las curvas $ROC$ normalmente son concavas, salvando la presencia de irregularidades (e.g. ganchos). Una curva $ROC$ concava, presenta un ratio de probabilidad positivo ($PLR(t) = ROC(t)/t$) decreciente. De esta forma el $PLR$ alcaza valores mínimos en el extremo superior de la curva.
+
+Trasladado a este caso, si se puede asegurar que la curva se mantiene concava en la región de interés, es decir $PLR$ alcanza su mínimo valor en $FPR_2$ un límite inferior más ajustado se puede determinar, correspondiéndose al trapecio con puntos: $(FPR_1,0), (FPR_2, 0), (FPR_1, TPR_2)$ y $(FPR_2, TPR_2)$. Desarrollando esta área obtenemos:
+
+$$
+\dfrac{1}{2}(TPR_1+TPR_2)(FPR_2-FPR_1) \le A \le TPR_2(FPR_2-FPR_1)
+$$
+Conociendo los límites inferior y superior, y usándolos según las condiciones descritas, aplicando la transformación descrita por McClish para encapsular los valores entre $(0.5,1)$:
+
+$$
+\dfrac{1}{2}\left[1 + \dfrac{A - \text{min}}{\text{max} - \text{min}} \right]
+$$
+Se obtiene finalmente el $TpAUC$.
+
+De forma similar, procederemos a calcularlo para contrastarlo con las demás métricas. El algoritmo para el cálculo de este índice está implementado en el paquete `ROCpAI` de [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/ROCpAI.html) con la función `tpAUC`. El paquete además incluye funciones para el cálculo de sus estabilidades, aunque para este caso nos bastará con la función principal.
+
+La función utiliza como entrada un dataset donde la primera columna se corresponda con la respuesta y las siguientes los predictores.
+
+```{r Cálculo de TpAUC para diagnóstico}
+tpauc_sp_diagnostic_assay <- tpAUC(
+    dataset = diagnostic_dataset %>% mutate(
+        disease = roc_data$disease,
+        .before = 1
+    ),
+    low.value = 0,
+    up.value = 0.1,
+    plot = FALSE
+)
+```
+
+```{r Cálculo de TpAUC para pronóstico}
+tpauc_sp_prognostic_assay <- tpAUC(
+    dataset = prognostic_dataset %>% mutate(
+        prognostic = disease$prognostic,
+        .before = 1
+    ),
+    low.value = 0,
+    up.value = 0.1,
+    plot = FALSE
+)
+```
+
+Dado que la salida de la función es un objeto con diversas métricas, utilizaremos la función `assay` para extraer los $SpAUC$ almacenados en en `St_pAUC`. Finalmente nombraremos cada uno de los valores con su respectivo identificador.
+
+```{r Transformación en vector}
+tpauc_sp_diagnostic <- as.numeric(assay(tpauc_sp_diagnostic_assay)$St_pAUC)
+tpauc_sp_prognostic <- as.numeric(assay(tpauc_sp_prognostic_assay)$St_pAUC)
+
+names(tpauc_sp_diagnostic) <- colnames(diagnostic_dataset)
+names(tpauc_sp_prognostic) <- colnames(prognostic_dataset)
+```
+
+## 4.3. Índices para la sensibilidad
+
 
 
 
