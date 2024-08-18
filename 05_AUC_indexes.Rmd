@@ -188,11 +188,65 @@ enframe(auc_diagnostic) %>%
 
 Como podemos observar, los valores obtenidos para $pAUC$ no superan el $0.5$; valor límite en el $AUC$ con el que consideraríamos que un clasificador rinde igual que un clasificador completamente aleatorio.
 
-Además de por su interpretabilidad la métrica presenta problemas cuando dos marcadores presentan valores iguales para el $pAUC$ pero sus curvas $ROC$ se cruzan, [imposibilitando el decidir cual de los 2 clasificadores rinde mejor](https://onlinelibrary.wiley.com/doi/full/10.1002/bimj.201400023).
+Además de por su interpretabilidad, la métrica presenta problemas cuando dos marcadores presentan valores iguales para el $pAUC$ pero sus curvas $ROC$ se cruzan, [imposibilitando el decidir cual de los 2 clasificadores rinde mejor](https://onlinelibrary.wiley.com/doi/full/10.1002/bimj.201400023). Este fenómeno se comprobará más adelante.
 
-Para lidiar con estos problemas se han desarrollado diferentes transformaciones en los diversos índices: tanto en especificidad como en sensibilidad.
+Para lidiar con estos problemas se han desarrollado diferentes transformaciones en los diversos índices, tanto en especificidad como en sensibilidad.
 
+## 4.2. Índices para la especificidad
 
+### 4.2.1. SpAUC
+
+Una de las primeras transformaciones [propuestas por McClish](https://journals.sagepub.com/doi/10.1177/0272989X8900900307), es el área parcial bajo curva estandarizada ($SpAUC$). 
+
+Esta transformación trabaja con sobre un rango concreto de especificidad $(FPR_1, FPR_2)$, donde los límites superior e inferior para el $pAUC$ se escalan a los valores en el intervalo $(0.5, 1)$, haciendo que la métrica sea más interpretable. A pesar de ello, la métrica todavía presenta algunas desventajas.
+
+El límite superior para el área que engloba el $pAUC$, esta definida por el rectángulo formado por los puntos: $(FPR_1, 0), (FPR_2, 0), (FPR_1, 1)$ y $(FPR_2, 1)$. Mientras que el límite inferior está definido por el trapecio con puntos: $(FPR_1, 0), (FPR_2, 0), (FPR_1, FPR_1)$ y $(FPR_2, FPR_2)$. Este será el trapecio que coincide con la diagonal de la curva. Si calculamos las áreas de los límites, el área $(A)$ que puede tomar el $pAUC$ está definida de la siguiente forma:
+
+$$ 
+1(FPR_2 - FPR_1)(FPR_2 + FPR_1) \le A \le FPR_2 - FPR_1
+$$
+Realizando la siguiente tranformación:
+
+$$
+\dfrac{1}{2}\left[1 + \dfrac{A - \text{min}}{\text{max} - \text{min}} \right]
+$$
+El índice toma un valor de $1$ cuando $A = \text{max}$ y un valor de $0.5$ cuando $A = \text{min}$, permitiendo ver el $pAUC$ de forma escalada al área total.
+
+El problema que presenta la métrica, es que asume el mismo límite inferior para todas las curvas. En la práctica es común trabajar con curvas que atraviesen la diagonal, por lo que el límite inferior no está bien definido. Además, aunque resuelve el problema de facilitar la interpretación, no solventa el problema de 2 curvas con igual $pAUC$ que se cruzan.
+
+Conociendo sus ventajas y desventajas, calcularemos el índice para contrastarlo con otros métodos. Para ello utilizaremos también la función `pROC::auc` indicando el argumento `partial.auc.correct = TRUE` para que aplique la corrección descrita por McClish. Además indicaremos `allow.invalid.partial.auc.correct = FALSE`, de esta forma la función no calculará el índice (aunque sea posible) si la curva está descrita por debajo del area mínima puesto que el límite inferior no está bien definido; en su lugar devolverá un `NA`.
+
+```{r Cálculo de SpAUC para diagnóstico, warning=FALSE}
+spauc_sp_diagnostic <- map_dbl(
+    diagnostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "spec",
+    partial.auc.correct = TRUE,
+    allow.invalid.partial.auc.correct = FALSE,
+    response = roc_data$disease,
+    direction = "<",
+    quiet = TRUE,
+    .progress = TRUE
+)
+```
+
+```{r Cálculo de SpAUC para pronóstico}
+spauc_sp_prognostic<- map_dbl(
+    prognostic_dataset,
+    auc,
+    partial.auc = c(0.9, 1),
+    partial.auc.focus = "spec",
+    partial.auc.correct = TRUE,
+    allow.invalid.partial.auc.correct = FALSE,
+    response = disease$prognostic,
+    direction = "<",
+    quiet = TRUE,
+    .progress = TRUE
+)
+```
+
+### 4.2.2. TpAUC
 
 
 
