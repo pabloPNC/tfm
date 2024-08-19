@@ -180,7 +180,7 @@ enframe(auc_diagnostic) %>%
         enframe(pauc_sp_diagnostic),
         join_by(name == name)
     ) %>%
-    rename(
+    dplyr::rename(
         auc = value.x,
         pauc = value.y
     ) %>%
@@ -322,7 +322,36 @@ names(tpauc_sp_prognostic) <- colnames(prognostic_dataset)
 
 ## 4.3. Índices para la sensibilidad
 
+### 4.3.1. NpAUC
 
+Uno de los primeros índices enfocados a trabajar en regiones de alta sensibilidad, es el [propuesto por Jiang et al.](https://sci-hub.se/https://doi.org/10.1148/radiology.201.3.8939225), el índice del area parcial normalizado ($NpAUC$). Este índices es conceptualmente similar a $SpAUC$. Teniendo en cuenta que para este caso $TPR_2 = 1$ y $TPR_1 = TPR_0$ y $TPR_1 < TPR_2$ se definen los límites superiores e inferiores, dados por: 
+
++ El rectángulo de puntos $(1,1), (1, TPR_0), (0, 1)$ y $(0, TPR_0)$, es decir de longitud $1$ y altura dada por la banda $1 - TPR_0$.
++ El triángulo de puntos $(TPR_0, TPR_0), (1, TPR_0)$ y $(1,1)$.
+
+Que de forma desarrollada, quedaría de la siguiente forma:
+
+$$
+\dfrac{1}{2}(1 - TPR_0)^2 \le A \le 1 - TPR_0
+$$
+
+A continuación, para llevar a cabo la normalización simplemente se divide cada término entre $1-TPR_0$ que se corresponde, como hemos explicado antes, con el área del rectángulo superior al $pAUC$.
+
+$$
+\dfrac{1}{2}(1-TPR_0) \le \dfrac{A}{1 - TPR_0} \le 1
+$$
+
+De esta forma, la métrica propuesta sería la siguiente:
+
+$$
+A' = \dfrac{A}{1 - TPR_0}
+$$
+Esta transformación permite que la métrica se interprete como el valor promedio de la especificidad para todos los valores de sensibilidad por encima de $TPR_0$.
+
+A pesar de su utilidad a la hora de producir valores más interpretables, sigue presentando algunas desventajas. En primer lugar, el índices puede dar en ocasiones valores inferiores a $0.5$ y en segundo lugar, no es capaz de comparar de forma adecuada diversos clasificadores que puedan mostrar diferente forma en sus curvas $ROC$ y que tengan el mismo $pAUC$.
+
+
+### 4.3.2. FpAUC
 
 
 
