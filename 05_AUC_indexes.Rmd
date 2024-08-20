@@ -257,6 +257,7 @@ Los límites iniciales propuestos por este índice parten de los establecidos po
 $$
 \dfrac{1}{2}(FPR_2 - FPR_1)(FPR_2 + FPR_1) \le A \le FPR_2 - FPR_1
 $$
+
 Sin embargo, Vivo et al. proponen que estos límites se pueden ajustar a las regiones del area parcial donde esté definida la curva. Es decir, ajustandose a los puntos de la curva presentes en la región de interes, donde $TPR_i = TPR(FPR_i)$ para $i = 1,2$. De esta forma los límites se ajustan a:
 
 $$
@@ -276,11 +277,13 @@ Trasladado a este caso, si se puede asegurar que la curva se mantiene concava en
 $$
 \dfrac{1}{2}(TPR_1+TPR_2)(FPR_2-FPR_1) \le A \le TPR_2(FPR_2-FPR_1)
 $$
+
 Conociendo los límites inferior y superior, y usándolos según las condiciones descritas, aplicando la transformación descrita por McClish para encapsular los valores entre $(0.5,1)$:
 
 $$
 \dfrac{1}{2}\left[1 + \dfrac{A - \text{min}}{\text{max} - \text{min}} \right]
 $$
+
 Se obtiene finalmente el $TpAUC$.
 
 De forma similar, procederemos a calcularlo para contrastarlo con las demás métricas. El algoritmo para el cálculo de este índice está implementado en el paquete `ROCpAI` de [Bioconductor](https://www.bioconductor.org/packages/release/bioc/html/ROCpAI.html) con la función `tpAUC`. El paquete además incluye funciones para el cálculo de sus estabilidades, aunque para este caso nos bastará con la función principal.
@@ -347,9 +350,10 @@ De esta forma, la métrica propuesta sería la siguiente:
 $$
 A' = \dfrac{A}{1 - TPR_0}
 $$
+
 Esta transformación permite que la métrica se interprete como el valor promedio de la especificidad para todos los valores de sensibilidad por encima de $TPR_0$.
 
-A pesar de su utilidad a la hora de producir valores más interpretables y ser aplicable con curvas inapropiadas, sigue presentando algunas desventajas. En primer lugar, el índices puede dar en ocasiones valores inferiores a $0.5$ y en segundo lugar, no es capaz de comparar de forma adecuada diversos clasificadores que puedan mostrar diferente forma en sus curvas $ROC$ y que tengan el mismo $pAUC$.
+A pesar de su utilidad a la hora de producir valores más interpretables y ser aplicable con algunas curvas inapropiadas, sigue presentando algunas desventajas. En primer lugar, el índices puede dar en ocasiones valores inferiores a $0.5$ y en segundo lugar, no es capaz de comparar de forma adecuada diversos clasificadores que puedan mostrar diferente forma en sus curvas $ROC$ y que tengan el mismo $pAUC$.
 
 De forma similar a los otros índices procederemos a calcularlo para más tarde contrastarlo con el resto. Dado que el $NpAUC$ no se encuntra disponible en ningún paquete conocido, para facilitar su uso este índice ha sido incluido en un paquete propio, `ROCnGO`. 
 
@@ -392,6 +396,41 @@ De esta forma el $FpAUC$ es capaz de:
 1. Ser interpretable como métrica de diagnóstico. Esto incluye ser igual a $AUC$ cuando $TPR_0 = 0$.
 1. Aplicarse a cualquier forma de la curva $ROC$, incluyendo las inadecuadas.
 1. Distinguir dos clasificadores con $pAUC$ iguales y que sus curvas $ROC$ se crucen.
+
+Para calcular el $FpAUC$ en primer lugar, se deben definir nuevos límites para el $pAUC$ en condiciones de alta sensiblidad. En primer lugar, los límites iniciales son similares a los definidos en $NpAUC$, es decir:
+
+$$
+\dfrac{1}{2}(1 - TPR_0)^2 \le A \le 1 - TPR_0
+$$
+
+En primer lugar, un nuevo límite superior puede ser definido. Dado que una curva $ROC$ es una representación de las parejas de $TPR$ y $FPR$, de esta este límite puede limitarse a la región donde esté definidad la curva. Es decir, al rectángulo de puntos $(FPR_0, TPR_0), (FPR_0, 1), (1, TPR_0)$ y $(1,1)$, donde $FPR_0$ es el $FPR$ para el punto de la curva con $TPR_0$. De esta forma se obtiene:
+
+$$
+\dfrac{1}{2}(1 - TPR_0)^2 \le A \le (1-FPR_0)(1 - TPR_0)
+$$
+
+Como se ha explicado anteriormente, durante la sección del $TpAUC$, por definción las curvas $ROC$ son funciones monótonas no decrecientes. Esto no asegura, sin embargo, que sean concavas ya que en algunas ocasiones pueden pasar por debajo de la diagonal y mostrar rendimientos peores al de un predictor aleatorio.
+
+La concavidad de la curva puede ser determinada por métricas como el ratio de probabilidad negativa ($NLR$). El $NLR$ se puede expresar matemáticamente de la siguiente forma $NLR = (1 - ROC(t))/(1 - t)$ para cada punto de la curva. Gráficamente, el $NLR$ representa la pendiente de la línea recta que pasa por un putno de la curva $ROC$ y el punto $(1,1)$. De esta forma, una curva concava presentará un $NLR$ decreciente.
+
+De esta forma, si $NLR(t) \le NLR_0$ donde $NLR_0 = NLR(FPR_0)$ para $t \ge FPR_0$ o en otras palabras, si se asegura la concavidad en la región de alta sensibilidad, podemos definir un límite inferior más ajustado que viene dado por el triángulo de puntos $(FPR_0, TPR_0), (1, TPR_0)$ y $(1,1)$. De esta forma, podríamos ajustar los límites a:
+
+$$
+\dfrac{1}{2}(1 - FPR_0)(1 - TPR_0) \le A \le (1-FPR_0)(1 - TPR_0)
+$$
+
+Finalmente se debe considerar la posibilidad de que puedan aparecer ganchos en el extremo superior derecho de la región. En estas situaciones, incluso el límite inferior cuando no trabajamos con una curva $ROC$ concava, no se ajusta. De esta forma, se define que si existe $t \ge FPR_0$ que cumpla $NLR(t) > \text{max}\ \{1, NLR_0\}$, no podemos encontrar un límite inferior que se ajuste de forma que:
+
+$$
+0 \le A \le (1-FPR_0)(1 - TPR_0)
+$$
+Conociendo y considerando todas los casos posibles simplemente, aplicando la transformación descrita por McClish para que el índice quede contenido en un rango de $(0.5, 1)$
+
+$$
+\dfrac{1}{2}\left[1 + \dfrac{A - \text{min}}{\text{max} - \text{min}} \right]
+$$
+
+se obtiene el índice $FpAUC$.
 
 
 
