@@ -14,6 +14,7 @@ library(dplyr)
 library(forcats)
 library(tibble)
 library(ROCpAI)
+library(ROCnGO)
 ```
 
 Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cancer.
@@ -348,10 +349,49 @@ A' = \dfrac{A}{1 - TPR_0}
 $$
 Esta transformación permite que la métrica se interprete como el valor promedio de la especificidad para todos los valores de sensibilidad por encima de $TPR_0$.
 
-A pesar de su utilidad a la hora de producir valores más interpretables, sigue presentando algunas desventajas. En primer lugar, el índices puede dar en ocasiones valores inferiores a $0.5$ y en segundo lugar, no es capaz de comparar de forma adecuada diversos clasificadores que puedan mostrar diferente forma en sus curvas $ROC$ y que tengan el mismo $pAUC$.
+A pesar de su utilidad a la hora de producir valores más interpretables y ser aplicable con curvas inapropiadas, sigue presentando algunas desventajas. En primer lugar, el índices puede dar en ocasiones valores inferiores a $0.5$ y en segundo lugar, no es capaz de comparar de forma adecuada diversos clasificadores que puedan mostrar diferente forma en sus curvas $ROC$ y que tengan el mismo $pAUC$.
 
+De forma similar a los otros índices procederemos a calcularlo para más tarde contrastarlo con el resto. Dado que el $NpAUC$ no se encuntra disponible en ningún paquete conocido, para facilitar su uso este índice ha sido incluido en un paquete propio, `ROCnGO`. 
+
+El paquete cuenta con la función `ROCnGO::np_auc`, que nos permite calcular el índice con un procedimiento similar a los casos anteriores.
+
+```{r Cálculo de NpAUC para diagnóstico, warning=FALSE}
+npauc_sn_diagnostic <- map_dbl(
+    diagnostic_dataset,
+    \(gene) {
+        np_auc(
+            predictor = gene,
+            response = roc_data$disease,
+            lower_tpr = 0.9
+        )
+    },
+    .progress = TRUE
+)
+```
+
+```{r Cálculo de NpAUC para pronóstico, warning=FALSE}
+npauc_sn_pronostic <- map_dbl(
+    prognostic_dataset,
+    \(gene) {
+        np_auc(
+            predictor = gene,
+            response = disease$prognostic,
+            lower_tpr = 0.9
+        )
+    },
+    .progress = TRUE
+)
+```
 
 ### 4.3.2. FpAUC
+
+De forma similar al $TpAUC$ con respecto al $SpAUC$, en casos de especificidad, [Vivo et al.](https://www.mdpi.com/2227-7390/9/21/2826) propusieron un índice que pudiera solventar las desventajas del $NpAUC$. Este índice, denominado "fitted partial area index" ($FpAUC$), además de conservar las ventajas propuestas por el anterior, solventa los problemas que presentaba.
+
+De esta forma el $FpAUC$ es capaz de:
+
+1. Ser interpretable como métrica de diagnóstico. Esto incluye ser igual a $AUC$ cuando $TPR_0 = 0$.
+1. Aplicarse a cualquier forma de la curva $ROC$, incluyendo las inadecuadas.
+1. Distinguir dos clasificadores con $pAUC$ iguales y que sus curvas $ROC$ se crucen.
 
 
 
