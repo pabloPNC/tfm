@@ -432,5 +432,35 @@ $$
 
 se obtiene el índice $FpAUC$.
 
+De forma similar a los casos anteriores, calcularemos el índice para contrastarlo con el resto. Al igual que el $NpAUC$, el $FpAUC$ no se encuentra actualmente en ningún paquete conocido, por lo que también se ha incluido una función que permite calcularlo en el paquete `ROCnGO`.
 
+Para calcular el índice para los predictores, se utilizará la función `ROCnGO:fp_auc`:
+
+```{r Cálculo de FpAUC para diagnóstico, warning=FALSE}
+fpauc_sn_diagnostic <- map_dbl(
+    diagnostic_dataset,
+    \(gene) {
+        fp_auc(
+            predictor = gene,
+            response = roc_data$disease,
+            lower_tpr = 0.9
+        )
+    },
+    .progress = TRUE
+)
+```
+
+```{r Cálculo de FpAUC para pronóstico, warning=FALSE}
+fpauc_sn_pronostic <- map_dbl(
+    prognostic_dataset,
+    \(gene) {
+        fp_auc(
+            predictor = gene,
+            response = disease$prognostic,
+            lower_tpr = 0.9
+        )
+    },
+    .progress = TRUE
+)
+```
 
