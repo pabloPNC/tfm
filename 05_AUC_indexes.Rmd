@@ -374,7 +374,7 @@ npauc_sn_diagnostic <- map_dbl(
 ```
 
 ```{r Cálculo de NpAUC para pronóstico, warning=FALSE}
-npauc_sn_pronostic <- map_dbl(
+npauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
         np_auc(
@@ -451,7 +451,7 @@ fpauc_sn_diagnostic <- map_dbl(
 ```
 
 ```{r Cálculo de FpAUC para pronóstico, warning=FALSE}
-fpauc_sn_pronostic <- map_dbl(
+fpauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
         fp_auc(
@@ -463,4 +463,55 @@ fpauc_sn_pronostic <- map_dbl(
     .progress = TRUE
 )
 ```
+# 5. Evaluación de índices
+
+Hasta ahora se han calculado todos los índices para condiciones de alta sensibilidad y especificidad, enfocados a encontrar marcadores de diagnóstico así como de pronóstico. Sin embargo, como se ha ido explicando, cada índice presenta una serie de ventajas y desventajas.
+
+De esta forma, para poder evaluar cual de los siguientes índices presenta un mejor rendimiento a la hora de identificar un marcador para estas condiones, necesitaremos comparar sus resultados.
+
+## 5.1. Agrupar por condiciones
+
+Para poder realizar comparaciones, deberemos agrupar las puntuaciones de los índices en las distintas condiciones.
+
+```{r Índices de sensiblidad para diagnóstico}
+indexes_sn_diagnostic <- tibble(
+    identifier = names(auc_diagnostic),
+    auc = auc_diagnostic,
+    pauc = pauc_sn_diagnostic,
+    npauc = npauc_sn_diagnostic,
+    fpauc = fpauc_sn_diagnostic
+)
+```
+
+```{r Índices de sensiblidad para pronóstico}
+indexes_sn_pronostic <- tibble(
+    identifier = names(auc_prognostic),
+    auc = auc_prognostic,
+    pauc = pauc_sn_prognostic,
+    npauc = npauc_sn_prognostic,
+    fpauc = fpauc_sn_prognostic
+)
+```
+
+```{r Índices de especificidad para diagnóstico}
+indexes_sp_diagnostic <- tibble(
+    identifier = names(auc_diagnostic),
+    auc = auc_diagnostic,
+    pauc = pauc_sp_diagnostic,
+    spauc = spauc_sp_diagnostic,
+    tpauc = tpauc_sp_diagnostic
+)
+```
+
+```{r Índices de especificidad para pronóstico}
+indexes_sp_pronostic <- tibble(
+    identifier = names(auc_prognostic),
+    auc = auc_prognostic,
+    pauc = pauc_sp_prognostic,
+    npauc = npauc_sn_prognostic,
+    fpauc = fpauc_sn_prognostic
+)
+```
+
+
 
