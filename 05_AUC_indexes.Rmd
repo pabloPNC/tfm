@@ -35,7 +35,14 @@ Cuando se trabaja con marcadores continuos, estos pueden ser dicotomizados en in
 
 ## 2.2. Cálculo de AUCs para diagnóstico
 
-Una vez se ha comprendido la teoría, podemos proceder a realizar los cálculos. Para ello utilizaremos el la función `pROC::auc`, que calcula dicho parámetro utilizando una la variable para hacer la predicción (`predictor`) y una variable que contenga la respuesta a dicha predicción (`response`).
+Una vez se ha comprendido la teoría, podemos proceder a realizar los cálculos. Para ello utilizaremos la función `pROC::auc`, que calcula dicho parámetro utilizando una la variable para hacer la predicción (`predictor`) y una variable que contenga la respuesta a dicha predicción (`response`).
+
+La función requiere que la respuesta sea un `factor` de valores `0` y `1`, que indica los casos con la condición de estudio y sin ella, respectivamente. En nuesto conjunto de datos, estos valores se corresponden con el caso opuesto, por lo que en primer lugar reorganizaremos estos valores.
+
+```{r Reorganización del factor}
+roc_data$disease <- fct_relevel(roc_data$disease, c("0", "1"))
+```
+
 
 Dado que en nuestro caso, buscaremos repetir el proceso para cada una de las variables utilizaremos la función `purrr::map_dbl`.
 
@@ -65,6 +72,7 @@ Esta sección requerirá de un filtrado previo, puesto que nuestro conjunto de d
 ```{r Filtrado de casos enfermos}
 disease <- roc_data %>% filter(disease == 1)
 disease[["prognostic"]] <- fct_drop(disease[["prognostic"]])
+disease[["prognostic"]] <- fct_relevel(disease[["prognostic"]], c("0", "1"))
 ```
 
 Una vez realizado el filtrado, podemos realizar el mismo procedimiento.
@@ -83,6 +91,7 @@ auc_prognostic <- map_dbl(
     .progress = TRUE
 )
 ```
+
 # 3. pAUC
 
 ## 3.1. Introducción
@@ -484,7 +493,7 @@ indexes_sn_diagnostic <- tibble(
 ```
 
 ```{r Índices de sensiblidad para pronóstico}
-indexes_sn_pronostic <- tibble(
+indexes_sn_prognostic <- tibble(
     identifier = names(auc_prognostic),
     auc = auc_prognostic,
     pauc = pauc_sn_prognostic,
@@ -504,7 +513,7 @@ indexes_sp_diagnostic <- tibble(
 ```
 
 ```{r Índices de especificidad para pronóstico}
-indexes_sp_pronostic <- tibble(
+indexes_sp_prognostic <- tibble(
     identifier = names(auc_prognostic),
     auc = auc_prognostic,
     pauc = pauc_sp_prognostic,
