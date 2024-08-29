@@ -225,7 +225,7 @@ El índice toma un valor de $1$ cuando $A = \text{max}$ y un valor de $0.5$ cuan
 
 El problema que presenta la métrica, es que asume el mismo límite inferior para todas las curvas. En la práctica es común trabajar con curvas que atraviesen la diagonal, por lo que el límite inferior no está bien definido. Además, aunque resuelve el problema de facilitar la interpretación, no solventa el problema de 2 curvas con igual $pAUC$ que se cruzan.
 
-Conociendo sus ventajas y desventajas, calcularemos el índice para contrastarlo con otros métodos. Para ello utilizaremos también la función `pROC::auc` indicando el argumento `partial.auc.correct = TRUE` para que aplique la corrección descrita por McClish. Además indicaremos `allow.invalid.partial.auc.correct = FALSE`, de esta forma la función no calculará el índice (aunque sea posible) si la curva está descrita por debajo del area mínima puesto que el límite inferior no está bien definido; en su lugar devolverá un `NA`.
+Conociendo sus ventajas y desventajas, calcularemos el índice para contrastarlo con otros métodos. Para ello utilizaremos también la función `pROC::auc` indicando el argumento `partial.auc.correct = TRUE` para que aplique la corrección descrita por McClish. Además indicaremos `allow.invalid.partial.auc.correct = FALSE`, de esta forma la función no calculará el índice (aunque sea posible) si la curva está descrita por debajo del area mínima, puesto que el límite inferior no está bien definido, en su lugar devolverá un `NA`.
 
 ```{r Cálculo de SpAUC para diagnóstico, warning=FALSE}
 spauc_sp_diagnostic <- map_dbl(
@@ -480,7 +480,7 @@ De esta forma, para poder evaluar cual de los siguientes índices presenta un me
 
 ## 5.1. Agrupar por condiciones
 
-Para poder realizar comparaciones, deberemos agrupar las puntuaciones de los índices en las distintas condiciones.
+Para poder realizar comparaciones, deberemos agrupar las puntuaciones de los índices en las distintas condiciones. 
 
 ```{r Índices de sensiblidad para diagnóstico}
 indexes_sn_diagnostic <- tibble(
@@ -522,5 +522,53 @@ indexes_sp_prognostic <- tibble(
 )
 ```
 
+## 5.2. Marcadores para diagnóstico
+
+### 5.2.1. Métricas generales
+
+Antes de proceder a analizar en detalle los distintos índices, se describiremos algunas métricas generales. Para ello, utilizaremos la función `ROCnGO::summarize_dataset`.
+
+```{r Cálculo de métricas globales sensibilidad, warning=FALSE, eval=FALSE}
+metrics_diagnostic_tpr <- summarize_dataset(
+    diagnostic_dataset,
+    predictors = NULL,
+    response = roc_data$disease,
+    ratio = "tpr",
+    threshold = 0.9,
+    .progress = TRUE
+)
+```
+
+```{r Cálculo de métricas globales especificidad, eval=FALSE, warning=FALSE}
+metrics_diagnostic_fpr <- summarize_dataset(
+    diagnostic_dataset,
+    predictors = NULL,
+    response = roc_data$disease,
+    ratio = "fpr",
+    threshold = 0.1,
+    .progress = TRUE
+)
+```
+
+
+El conjuto de datos utilizado en condiciones de diagnóstico cuenta con la expresión de 2561 genes de 554 muestras extraídas de pacientes con cáncer de prostata, 52 de las cuales se corresponden con tejido sano y 502 con tejido cenceroso. Los genes seleccionados se corresponden con aquellos expresados diferencialmente en celulas luminales de próstata identificadas como cancerosas.
+
+De los 2561 genes seleccionados, 1722 (67.23%) presentan un $AUC \ge 0.5$. En regiones de alta sensibilidad ($TPR \ge 0.9$), de este número 184 (10.68% y 7.18% del total) son completamente concavas, 148 (8.59% y 5.77% del total) presentan algun tipo de gancho sin atravesar la línea de azar (parcialmente adecuadas) y 1390 (80.72% y 54.27% del total) atraviesan en algún punto dicha línea.
+
+En regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 405 (23.51% y 15.81% del total) presentan curvas completamente concavas, 1032 (59.93% y 40.29% del total) presentan curvas parcialmente adecuadas y 285 (16.55% y 11.12% del total) contienen algún punto bajo la línea de azar.
+
+### 5.2.1. Índices de sensbilidad: $NpAUC$ y $FpAUC$
+
+Para evaluar en detalle los distintos índices, se exploraran alguunas medidas de tendencia central.
+
+```{r Tendencia central de los parámetros}
+summary(indexes_sn_diagnostic)
+```
+
+Con las métricas es posible observar los rangos de valores que toman los distintos índices. El $pAUC$ toma valores inferiores a $0.5$, el $NpAUC$ toma valores tanto inferiores como superiores a dicho valor y finalmente el $FpAUC$ que solo presenta valores superiores.
+
+En una primera instancia, se puede observar como el $pAUC$ se convierte en una métrica difícil de interpretar a simple vista, mientras que el $NpAUC$ y $FpAUC$ al tener límites defindos tienen una mejor interpretación.
+
+Sin embargo si observarmos de nuevo los rangos de valores, aunque tanto el $NpAUC$ y $FpAUC$ están comprendidos por un límite superior de $1$, no es el caso para su ímite inferior. Para comprender esta situacion utilizaremos como ejemplo el gen `ENSG00000169347`.
 
 
