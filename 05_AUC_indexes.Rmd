@@ -554,9 +554,9 @@ De los 2561 genes seleccionados, 1722 (67.23%) presentan un $AUC \ge 0.5$. En re
 
 En regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 405 (23.51% y 15.81% del total) presentan curvas completamente concavas, 1032 (59.93% y 40.29% del total) presentan curvas parcialmente adecuadas y 285 (16.55% y 11.12% del total) contienen algún punto bajo la línea de azar.
 
-### 5.2.1. Índices de sensbilidad: $NpAUC$ y $FpAUC$
+### 5.2.2. Índices de sensbilidad: $NpAUC$ y $FpAUC$
 
-Para evaluar en detalle los distintos índices, se exploraran alguunas medidas de tendencia central.
+Para evaluar en detalle los distintos índices, se exploraran algunas medidas de tendencia central.
 
 ```{r Tendencia central de los parámetros}
 summary(indexes_sn_diagnostic)
@@ -566,9 +566,9 @@ Con las métricas es posible observar los rangos de valores que toman los distin
 
 En una primera instancia, se puede observar como el $pAUC$ se convierte en una métrica difícil de interpretar a simple vista, mientras que el $NpAUC$ y $FpAUC$ al tener límites defindos tienen una mejor interpretación.
 
-Sin embargo si observarmos de nuevo los rangos de valores, aunque tanto el $NpAUC$ y $FpAUC$ están comprendidos por un límite superior de $1$, no es el caso para su ímite inferior. Para comprender esta situacion utilizaremos como ejemplo el gen `ENSG00000169347`. Comprobando sus métricas con la función `ROCnGO::summarize_predictor`, para nuestro ratio ($TPR$) y umbral de interés ($0.9$), podemos ver que este clasificador se corresponse con el gen con mayor valor para $FpAUC$.
+Sin embargo si observamos de nuevo los rangos de valores, aunque tanto el $NpAUC$ y $FpAUC$ están comprendidos por un límite superior de $1$, no es el caso para su ímite inferior. Para comprender esta situacion utilizaremos como ejemplo el gen `ENSG00000169347`. Comprobando sus métricas con la función `ROCnGO::summarize_predictor`, para nuestro ratio ($TPR$) y umbral de interés ($0.9$), podemos ver que este clasificador se corresponse con el gen con mayor valor para $FpAUC$.
 
-```{r Métricas de ENSG00000169347 warning=FALSE}
+```{r Métricas de ENSG00000169347,warning=FALSE}
 summarize_predictor(roc_data, ENSG00000169347, disease, "tpr", 0.9)
 ```
 
@@ -608,7 +608,7 @@ plot_partial_roc_curve(
     )
 ```
 
-Ampliando la figura a la región de interés, observarmos como el límite inferior del $FpAUC$ se adapta a la región comprendida por la curva. Esto permite que el índice sea adecuado al margen del tipo de curva y presente valores mayores de $0.5$, haciéndola más interpretable.
+Ampliando la figura a la región de interés, observarmos como el límite inferior del $FpAUC$ se adapta a la región comprendida por la curva. Esto permite que el índice sea adecuado al margen del tipo de curva y presente valores mayores de $0.5$, haciéndolo más interpretable.
 
 Esta información se puede contrastar además con el predictor `ENSG00000105707`, el predictor de mayor valor para $NpAUC$.
 
@@ -686,7 +686,6 @@ Como hemos visto anteriormente el $FpAUC$ adapta sus límites a los puntos defin
 Contrastando las métricas de todo el conjunto de datos podemos observar esta capacidad de discriminación entre predictores.
 
 ```{r Número de desempates}
-# Fix númber of rows
 metrics_diagnostic_tpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -704,29 +703,233 @@ metrics_diagnostic_tpr$data %>%
         fpauc_equal = all(fpauc_equal)
     ) %>%
     summarize(
-        npauc_equal = count(npauc_equal),
-        fpauc_equal = count(fpauc_equal)
+        npauc_equal = sum(npauc_equal),
+        fpauc_equal = sum(fpauc_equal)
     ) %>%
     mutate(
-        npauc_distintct = nrow(.) - npauc_equal,
-        fpauc_distintct = nrow(.) - fpauc_equal,
+        npauc_distintct = 246 - npauc_equal,
+        fpauc_distintct = 246 - fpauc_equal,
     ) %>%
     relocate(
         sort(names(.))
     )
 ```
 
-```{r}
-test_2 %>%
-    summarise(
-        np_auc_equal = count(np_auc_equal),
-        fp_auc_equal = count(fp_auc_equal)
-    ) %>%
-    mutate(
-        np_auc_distinct = nrow(test_2) - np_auc_equal,
-        fp_auc_distinct = nrow(test_2) - fp_auc_equal,
-    ) %>% 
-    relocate(
-        sort(names(.))
-    )
+De los 246 grupos formados, el $NpAUC$ no es capaz de desempatar en ninguno de ellos, a diferencia del $FpAUC$ que es capaz de seleccionar el mejor clasificador en 47 de los grupos. Estos calculos sobre todo el conjunto de datos refuerzan la afirmación de que el $FpAUC$ tiene una mejos rcapacidad de dsicriminación que el $NpAUC$.
+
+### 5.2.3. Índices de especificidad: $SpAUC$ y $TpAUC$
+
+De la misma forma que con los índices para la sensibilidad, en primer lugar exploraremos algunas métricas de tendencia central.
+
+```{r Tendencia central de los parámetros}
+summary(indexes_sp_diagnostic)
 ```
+
+Con las métricas, de nuevo es posible observar como el $pAUC$ solo toma valores inferiores a $0.5$ lo cual dificulta su interpretabilidad, mientras que el $SpAUC$ y $TpAUC$ pueden tomar valores superiores.
+
+De las métricas podemos descatar que el $TpAUC$ toma valores igual a 0 cuando teorícamente debería estar comprendido entre $0.5$ y $1$.
+
+```{r TpAUCs igual a 0}
+indexes_sp_diagnostic %>%
+    filter(tpauc == 0)
+```
+
+Una exploración de los datos, nos muestra como estos valores para el $TpAUC$ se corresponden con valores de $pAUC$ iguales a $0$. Para comprobarlo de forma visual, representaremos algunos de ellos.
+
+```{r Representación de predictores con pAUC = 0}
+plot_roc_curve(
+    roc_data,
+    response = disease,
+    predictor = ENSG00000169116
+) + add_roc_curve(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000135378
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+
+Como se observa en la figura, la curva de ambos predictores en la región de interés solo toma valores de $TPR = 0$, o en otras palabras no hay un area definida debajo de la curva. Si ampliamos la imagen, esto puede observarse con mayor claridad.
+
+```{r Ampliación de predictores con pAUC = 0}
+plot_partial_roc_curve(
+    roc_data,
+    response = disease,
+    predictor = ENSG00000169116,
+    ratio = "fpr",
+    threshold = 0.1
+) + add_partial_roc_curve(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000135378,
+        ratio = "fpr",
+        threshold = 0.1
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+
+Habiendo comprobado el origen de estos valores atípicos, podemos recalcular las métricas filtrando los predictores con $pAUC = 0$ y comprobar que los valores del $TpAUC$ ahora sí que se encuentran limitados por abajo en $0.5$, de forma similar al $SpAUC$.
+
+```{r Tendencia central de los parámetros}
+summary(indexes_sp_diagnostic %>% filter(pauc != 0))
+```
+
+Dado que ambas métricas están contenidas entre valores de $0.5$ y $1$, la interpretabilidad de ambos índices es buena. Sin embargo, podemos observar que algunos valores para el $SpAUC$ se corresponden con valores de `NA`.
+
+Como se ha explicado anteriormente, el $SpAUC$ tiene su límite definido con el trapecio de puntos $(FPR_1, 0), (FPR_2, 0), (FPR_1, FPR_1)$ y $(FPR_2, FPR_2)$, o en otras palabras, el que coincide con la línea del azar. El problema que presenta es que para curvas que esten definidas por debajo de dicha línea, este límite no se cumple, es por esta razón por la cual la función devuelve estos valores.
+
+Podemos comprobarlo gráficamente con el predictor `ENSG00000181754`, un predictor que aun presentando una forma concava en la región de interés, pasa por debajo de la línea de azar.
+
+```{r Métricas del predictor ENSG00000181754, warning=FALSE}
+summarize_predictor(
+    roc_data,
+    ENSG00000181754,
+    disease,
+    "fpr",
+    0.1
+)
+```
+
+```{r Plot predictor ENSG00000181754, warning=FALSE}
+plot_roc_curve(
+    roc_data,
+    response = disease,
+    predictor = ENSG00000181754
+) +
+    add_spauc_lower_bound(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000181754,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_tpauc_concave_lower_bound(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000181754,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+
+Como se puede observar en la figura, el límite inferior definido por el $SpAUC$ se encuentra por encima de la curva definida por el predictor. En comparativa, dado que el $TpAUC$ se ajusta a la región de la curva y a la forma de esta, podemos ver como en su caso la curva queda definida por encima del límite inferior.
+
+Este ajuste se puede contrastar seleccionando otro predictor con una forma de curva distinta. Por ejemplo, podemos utilizar como ejemplo el predictor `ENSG00000111667`.
+
+```{r Métricas del predictor ENSG00000111667, warning=FALSE}
+summarize_predictor(
+    roc_data,
+    ENSG00000111667,
+    disease,
+    "fpr",
+    0.1
+)
+```
+
+```{r Plot predictor ENSG00000111667, warning=FALSE}
+plot_roc_curve(
+    roc_data,
+    response = disease,
+    predictor = ENSG00000111667
+) +
+    add_spauc_lower_bound(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000111667,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_tpauc_under_chance_lower_bound(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000111667,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+
+Como se puede ver, el límite definido por el $TpAUC$ se ajusta a la curva y esta queda por encima del límite. En este caso se ajusta a $TPR = 0$, por lo que no hay un area mínima definida, es decir el límite inferior es $0$. Mientras que para el $SpAUC$, el límite definido no se adecua bien, con zonas que hacen que la curva pase por encima y otras por debajo.
+
+Con estas observaciones, podemos deducir que cuando tratamos con curvas con una forma adecuada y que estén definidas tanto el $SpAUC$ y el $TpAUC$ son métricas interpretables. Ambas quedan comprendidas entre valores de $0.5$ y $1$.
+
+Sin embargo, cuando no trabajamos en estas condiciones el $TpAUC$ se convierte en una métrica más adecuada, puesto que como se ha podido comprobar los límites que define se ajustan a la forma de la curva a diferencia del $NpAUC$, asegurando que los límites definidos se cumplan.
+
+Una vez considerada la interpretabilidad de ambas métricas, podemos contrastar su capacidad de distinguir entre curvas con igual $pAUC$ y que se cruzan.
+
+Del conjunto de datos, 374 predictores presentan un $pAUC$ igual a otro, agrupados en 174 grupos. Para evaluar el rendimiento de los índices utilizaremos los predictores `ENSG00000175336` y `ENSG00000169733`, aquellos que presentan el mayor valor de $pAUC$ en este subgrupo de predictores.
+
+```{r Índices de alta especificidad para ENSG00000175336 y ENSG00000169733, warning=FALSE}
+bind_rows(
+    "ENSG00000175336 " = summarize_predictor(
+        roc_data,
+        ENSG00000175336,
+        disease,
+        "fpr",
+        0.1
+    ),
+    "ENSG00000169733" = summarize_predictor(
+        roc_data,
+        ENSG00000169733,
+        disease,
+        "fpr",
+        0.1
+    ),
+    .id = "Identifier"
+)
+```
+
+```{r Comparación de marcadores ENSG00000175336 y ENSG00000169733}
+
+plot_roc_curve(
+    roc_data,
+    response = disease,
+    predictor = ENSG00000175336
+) +
+    add_roc_curve(
+        roc_data,
+        response = disease,
+        predictor = ENSG00000169733
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+
+```
+
+Como se puede observar ambos predictores presentan un buen rendimiento en global, dado en su $AUC$. Por otra parte el $SpAUC$ para ambos predictores se mantiene igual ($SpAUC = 0.7238576$). Esto puede deberse a que ambos predictores presentan tanto los mismos límites superior e inferior para ambos predictores.
+
+Por otra parte el $TpAUC$ adapta sus límites a los puntos definidos por la curva en la región de interés, tanto superior como inferior. Esto permite al índice ser capaz de identificar al predictor con mejor rendimiento, `ENSG00000169733`. 
+
+Podemos contrastar esta capacidad de discriminación entre predictores con el resto del conjunto de datos:
+
+```{r Número de desempates}
+metrics_diagnostic_fpr$data %>%
+    filter(pauc != 0) %>%
+    group_by(pauc) %>%
+    filter(n() > 1) %>%
+    mutate(
+        spauc_equal = all(
+            map_lgl(sp_auc, \(x) near(x, sp_auc[[1]]))
+        ),
+        tpauc_equal = all(
+            map_lgl(tp_auc, \(x) near(x, tp_auc[[1]]))
+        )
+    ) %>%
+    summarize(
+        spauc_equal = all(spauc_equal),
+        tpauc_equal = all(tpauc_equal)
+    ) %>%
+    dplyr::count(spauc_equal, tpauc_equal)
+```
+
+De los 374 predictores, con $pAUC > 0$ e igual al menos a otro predictor, agrupados en 174 grupos según el valor de $pAUC$, observamos como el $SpAUC$ no es capaz de diferenciar un predictor de mayor rendimiento en ningún caso. Además de no ser capaz de identificar un mejor predictor, cabe matizar que este índice solamente toma valores en 95 de los grupos mientras que en 79 de ellos no se encuentra definido.
+
+Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de los grupos, mientras que es incapaz de encontrar diferencias en 36 de ellos.
+
+Observando estos valores para todo el conjunto de datos, refuerza la afirmación de que ambos índices son fácilmente interpretables, sin embargo también refuerzan el hecho de que el $SpAUC$ no es totalmente adecuado en la practica, puesto que no puede aplicarse a situaciones donde la curva pase por debajo de la línea del azar. Además y al margen de ello, el $SpAUC$ tiene una menor capacidad de discriminación entre predictores a diferencia del $TpAUC$, el cual ha sido capaz de indentificar en la mayoría de empates el mejor predictor.
+
