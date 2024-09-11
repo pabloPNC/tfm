@@ -515,8 +515,8 @@ indexes_sp_prognostic <- tibble(
     identifier = names(auc_prognostic),
     auc = auc_prognostic,
     pauc = pauc_sp_prognostic,
-    npauc = npauc_sn_prognostic,
-    fpauc = fpauc_sn_prognostic
+    spauc = spauc_sp_prognostic,
+    tpauc = tpauc_sp_prognostic
 )
 ```
 
@@ -548,9 +548,9 @@ metrics_diagnostic_fpr <- summarize_dataset(
 )
 ```
 
-El conjuto de datos utilizado en condiciones de diagnóstico cuenta con la expresión de 2561 genes de 554 muestras extraídas de pacientes con cáncer de prostata, 52 de las cuales se corresponden con tejido sano y 502 con tejido cenceroso. Los genes seleccionados se corresponden con aquellos expresados diferencialmente en celulas luminales de próstata identificadas como cancerosas.
+El conjuto de datos utilizado en condiciones de diagnóstico cuenta con la expresión de 2651 genes de 554 muestras extraídas de pacientes con cáncer de prostata, 52 de las cuales se corresponden con tejido sano y 502 con tejido cenceroso. Los genes seleccionados se corresponden con aquellos expresados diferencialmente en celulas luminales de próstata identificadas como cancerosas.
 
-De los 2561 genes seleccionados, 1722 (67.23%) presentan un $AUC \ge 0.5$. En regiones de alta sensibilidad ($TPR \ge 0.9$), de este número 184 (10.68% y 7.18% del total) son completamente concavas, 148 (8.59% y 5.77% del total) presentan algun tipo de gancho sin atravesar la línea de azar (parcialmente adecuadas) y 1390 (80.72% y 54.27% del total) atraviesan en algún punto dicha línea.
+De los 2651 genes seleccionados, 1722 (67.23%) presentan un $AUC \ge 0.5$. En regiones de alta sensibilidad ($TPR \ge 0.9$), de este número 184 (10.68% y 7.18% del total) son completamente concavas, 148 (8.59% y 5.77% del total) presentan algun tipo de gancho sin atravesar la línea de azar (parcialmente adecuadas) y 1390 (80.72% y 54.27% del total) atraviesan en algún punto dicha línea.
 
 En regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 405 (23.51% y 15.81% del total) presentan curvas completamente concavas, 1032 (59.93% y 40.29% del total) presentan curvas parcialmente adecuadas y 285 (16.55% y 11.12% del total) contienen algún punto bajo la línea de azar.
 
@@ -932,4 +932,41 @@ De los 374 predictores, con $pAUC > 0$ e igual al menos a otro predictor, agrupa
 Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de los grupos, mientras que es incapaz de encontrar diferencias en 36 de ellos.
 
 Observando estos valores para todo el conjunto de datos, refuerza la afirmación de que ambos índices son fácilmente interpretables, sin embargo también refuerzan el hecho de que el $SpAUC$ no es totalmente adecuado en la practica, puesto que no puede aplicarse a situaciones donde la curva pase por debajo de la línea del azar. Además y al margen de ello, el $SpAUC$ tiene una menor capacidad de discriminación entre predictores a diferencia del $TpAUC$, el cual ha sido capaz de indentificar en la mayoría de empates el mejor predictor.
+
+## 5.3. Marcadores para pronóstico
+
+### 5.3.1. Métricas generales
+
+A continuación repetiremos los procedimientos previamente realizados, pero en esta ocasión aplicados a marcadores de pronóstico.
+
+```{r Cálculo de métricas globales sensibilidad-pronostico, warning=FALSE}
+metric_prognostic_tpr <- summarize_dataset(
+    prognostic_dataset,
+    predictors = NULL,
+    response = disease$prognostic,
+    ratio = "tpr",
+    threshold = 0.9,
+    .progress = TRUE
+)
+```
+
+```{r Cálculo de métricas globales especificidad-pronostico, warning=FALSE}
+metric_prognostic_fpr <- summarize_dataset(
+    prognostic_dataset,
+    predictors = NULL,
+    response = disease$prognostic,
+    ratio = "fpr",
+    threshold = 0.1,
+    .progress = TRUE
+)
+```
+
+El conjunto de datos utilizado para condiciones de pronóstico cuenta con la expresión de 2651 genes de 502 muestras de tejido canceroso, provenientes de pacientes con la enfermedad. Al igual que el conjunto utilizado en condiciones de diagnóstico, los genes seleccionados se corresponde con aquellos expresados diferencialmente en células luminales de próstata identificadas como cancerosas.
+
+De los genes seleccionados, 1015 (38.28 %) presentan un $AUC \ge 0.5$. En regiones de alta sensibilidad ($TPR \ge 0.9$), de este número 173 tienen una forma concava (17.04% y 6.54% del total), 296 (29.16% y 11.16% del total) presentan algún tipo de gancho sin llegar a atravesar la línea del azar (parcialmente adecuadas) y 546 (53.79% y 20.59% del total) atraviesan en algún punto dicha línea.
+
+Para regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 127 (12.51%, un 4.79% del total) presentan curvas cóncavas, 377 (37.14%, un 14.22% del total) curvas parcialmente adecuadas y 511 (50.34%, un 19.27% del total) contienen algún punto bajo la línea de azar
+
+### 5.3.2. Índicdes de sensibilidad: $NpAUC$ y $FpAUC$
+
 
