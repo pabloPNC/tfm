@@ -967,7 +967,112 @@ De los genes seleccionados, 1015 (38.28 %) presentan un $AUC \ge 0.5$. En region
 
 Para regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 127 (12.51%, un 4.79% del total) presentan curvas cóncavas, 377 (37.14%, un 14.22% del total) curvas parcialmente adecuadas y 511 (50.34%, un 19.27% del total) contienen algún punto bajo la línea de azar
 
-### 5.3.2. Índicdes de sensibilidad: $NpAUC$ y $FpAUC$
+### 5.3.2. Índices de sensibilidad: $NpAUC$ y $FpAUC$
 
+De forma similar al procedimiento en condiciones de diagnóstico, exploraremos algunas medidas de tendencia central.
 
+```{r Tendencia central de los parámetros}
+summary(metric_prognostic_tpr$data)
+```
+En este contexto podemos volver a observar como el $pAUC$ toma valores inferiores a $0.5$ y el $FpAUC$ superiores. La única diferencia destacable es que ahora el $NpAUC$ solamente toma valores inferiores a $0.5$.
+
+Como se ha explicado previamente, esto puede deberse a que el límite inferior definido por el $NpAUC$. Al corresponderse con la mitad del área definida por la banda $(TPR_0, 1)$, cualquier curva que no esté contenida por encima puede dar valores inferiores a $0.5$. Para visualizarlo, escogeremos el predictor `ENSG00000185615`, que se corresponde con el mayor valor de $NpAUC$ en los datos.
+
+```{r Métricas de ENSG00000185615, warning=FALSE}
+summarize_predictor(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    ENSG00000185615,
+    prognostic,
+    "tpr",
+    0.9
+)
+```
+```{r Predictor con límite inferior de NpAUC}
+plot_roc_curve(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    response = prognostic,
+    predictor = ENSG00000185615
+    ) +
+    add_chance_line() +
+    add_tpr_threshold_line(0.9) +
+    add_fpauc_partially_proper_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000185615,
+        threshold = 0.9
+    ) +
+    add_npauc_normalized_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000185615,
+        threshold = 0.9
+    ) 
+```
+
+Como se observa en la gráfica, efectivamente la curva se encuentra contenida por debajo del límite definido por el $NpAUC$, a diferencia del definido por el $FpAUC$ que se ajusta a la forma de la curva. Así, de nuevo, en el contexto de la búsqueda de marcadores de pronóstico en condiciones de alta sensibilidad, el $FpAUC$ presenta una mejor interpretabilidad.
+
+Además de su interpretabilidad, podemos evaluar su capacidad de distinguir predictore con igual $pAUC$ y cuyas curvas se crucen en algún punto en la región de interés.
+
+De todo el conjunto de datos, 241 predictores presentan un $pAUC$ idéntico a al menos otro, los cuales se han agrupado en 114 grupos según esta métrica. Para evaluar el rendimiento de los índices utilizaremos los predictores `ENSG00000272333` y `ENSG00000096070` los cuales presentan el mayor $pAUC$ entre los predictores.
+
+```{r Índices de alta sensibilidad para ENSG00000272333 y ENSG00000096070, warning=FALSE}
+bind_rows(
+    "ENSG00000272333" = summarize_predictor(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        ENSG00000272333,
+        prognostic,
+        "tpr",
+        0.9
+    ),
+    "ENSG00000096070" = summarize_predictor(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        ENSG00000096070,
+        prognostic,
+        "tpr",
+        0.9
+    ),
+    .id = "Identifier"
+)
+```
+```{r Comparación de marcadores ENSG00000272333 y ENSG00000096070, warning=FALSE}
+plot_roc_curve(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    response = prognostic,
+    predictor = ENSG00000272333
+) +
+    add_roc_curve(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000096070
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.9, "tpr")
+
+```
+En este caso, los predictores no presentan un buen rendimiento a nivel global, a diferencia de la región de interés. En esta región, ambas curvas se cruzan en varios de sus puntos y mientras el $NpAUC$ no es capaz de diferenciar cual engloba mayor área ($NpAUC = 0.13159748$), mientras que por otra parte el $FpAUC$ es capaz de identificar que el `ENSG00000096070` presenta una mayor área ($FpAUC = 0.8087762$) que el `ENSG00000272333` ($FpAUC = 0.7782804$).
+
+De forma similar a las condiciones de diagnóstico, dado que $FpAUC$ adapta sus límites a los puntos definidos por la curva y su forma, es capaz de distinguir entre predictores de igual $pAUC$ cuyas curvas se cruzan. Esta capacidad se puede observar en todo el conjunto de datos.
+
+```{r Número de desempates}
+metric_prognostic_tpr$data %>%
+    filter(pauc != 0) %>%
+    group_by(pauc) %>%
+    filter(n() > 1) %>%
+    mutate(
+        npauc_equal = all(
+            map_lgl(np_auc, \(x) near(x, np_auc[[1]]))
+        ),
+        fpauc_equal = all(
+            map_lgl(fp_auc, \(x) near(x, fp_auc[[1]]))
+        )
+    ) %>%
+    summarize(
+        npauc_equal = all(npauc_equal),
+        fpauc_equal = all(fpauc_equal)
+    ) %>%
+    dplyr::count(npauc_equal, fpauc_equal)
+```
+De los 114 grupos con igual $pAUC$, el $FpAUC$ es capaz de desempatar en 38 de ellos, mientras que en su lugar el $NpAUC$ debido a como establece sus límites no es capaz de discriminar entre un mejor predictor de cada grupo.
+
+### 5.3.3. Índices de espcecificidad: $SpAUC$ y $TpAUC$
 
