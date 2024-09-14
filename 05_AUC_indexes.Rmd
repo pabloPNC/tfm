@@ -1227,15 +1227,20 @@ metric_prognostic_fpr$data %>%
 
 De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un marcador que rinda mejor en ninguno de ellos, es más, no es capaz de aplicarse debido a la forma de la curva en 194 de ellos.
 
-Por otra parte el $TpAUC$ es capaz de diferenciar
+Por otra parte el $TpAUC$ es capaz de diferenciar un mejor predictor en 323 grupos de los 407 totales. Este hecho refuerza que el $TpAUC$ es una mejor métrica a la hora de evaluar el rendimiento de un predictor, dado que es aplicable a cualquier tipo de curva y es capaz de discriminar entre predictores con igual $pAUC$, a diferencia del $SpAUC$.
+
+
+# 6. Resultados
+
+Hasta ahora hemos comparado con diversos predictores el rendimiento de diversos índices escalados de $pAUC$ tanto en condiciones de alta sensibilidad y de alta especificidad. De forma general, se ha podido observar como los índices de alta especificidad y sensibilidad respectivamente, $SpAUC$ y $NpAUC$ presentan ciertas limitaciones que son solventadas por $TpAUC$ y $FpAUC$. En primer lugar ambas métricas presentan límites inferiores y superiores que o bien imposibilitan su aplicación, siendo el caso del $SpAUC$ en curvas por debajo de la línea del azar, o bien dificultando su interpretación, en el caso del $NpAUC$ cuando una curva no ocupa la mitad de su límite superior dando valores inferiores a $0.5$. En segundo lugar, estas métricas no son capaces de distinguir entre predictores que presenten un mismo $pAUC$ y se crucen en la región de estudio, siendo incapaces de seleccionar el predictor de mejor rendimiento.
+
+Por otra parte, los índices $TpAUC$ y $FpAUC$ además de ser aplicables a cualquier curva independientemente de su forma, ser interpretables como métricas al comprender sus valores entre $0.5$ y $1$; son capaces de distinguir entre predictores que reportan $pAUC$ iguales y sus curvas se cruzan en la región de interés, cuestión que quedaba sin resolver hasta ahora.
+
 
 
 <!--
-
-De los 374 predictores, con $pAUC > 0$ e igual al menos a otro predictor, agrupados en 174 grupos según el valor de $pAUC$, observamos como el $SpAUC$ no es capaz de diferenciar un predictor de mayor rendimiento en ningún caso. Además de no ser capaz de identificar un mejor predictor, cabe matizar que este índice solamente toma valores en 95 de los grupos mientras que en 79 de ellos no se encuentra definido.
-
-Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de los grupos, mientras que es incapaz de encontrar diferencias en 36 de ellos.
-
-Observando estos valores para todo el conjunto de datos, refuerza la afirmación de que ambos índices son fácilmente interpretables, sin embargo también refuerzan el hecho de que el $SpAUC$ no es totalmente adecuado en la practica, puesto que no puede aplicarse a situaciones donde la curva pase por debajo de la línea del azar. Además y al margen de ello, el $SpAUC$ tiene una menor capacidad de discriminación entre predictores a diferencia del $TpAUC$, el cual ha sido capaz de indentificar en la mayoría de empates el mejor predictor.
-
+Incluir la parte de marcadores significativos ahora 
 -->
+
+
+
