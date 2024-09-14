@@ -1076,3 +1076,166 @@ De los 114 grupos con igual $pAUC$, el $FpAUC$ es capaz de desempatar en 38 de e
 
 ### 5.3.3. Índices de espcecificidad: $SpAUC$ y $TpAUC$
 
+Igual que en los casos anteriores, para realizar la evaluación de los índices exploraremos algunas métricas generales en primer lugar.
+
+```{r Tendencia central de los parámetros}
+summary(metric_prognostic_fpr$data)
+```
+
+De nuevo, el $pAUC$ solo toma valores inferiores a $0.5$ a diferencia del $SpAUC$ y del $TpAUC$, que toman valores superiores y por tanto siendo métricas más interpretables.
+
+Como hemos visto anteriormente el $SpAUC$ toma valores `NA`, los cuales se corresponden para casos donde el límite inferior definido (el trapecio de puntos $(FPR_1, 0), (FPR_2, 0), (FPR_1, FPR_1)$ y $(FPR_2, FPR_2)$) no se cumple y la función devuelve este valor.
+
+A diferencia del caso anterior, el $TpAUC$ no toma valores atípicos por debajo de $0.5$, lo cual se debe a que en este caso no tenemos ningún predictor con $pAUC = 0$.
+
+Podemos contrastar la interpretabilidad de ambos índices utilizando arbitrariamente el predictor `ENSG00000110013`, que no presenta valor para el $SpAUC$ y uno relativamente alto para el $TpAUC$.
+
+```{r Métricas del predictor ENSG00000110013, warning=FALSE}
+summarize_predictor(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    ENSG00000110013,
+    prognostic,
+    "fpr",
+    0.1
+)
+```
+
+```{r Plot predictor ENSG00000196363, warning=FALSE}
+plot_roc_curve(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    response = prognostic,
+    predictor = ENSG00000110013
+) +
+    add_spauc_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000110013,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_tpauc_under_chance_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000110013,
+        lower_threshold = 0,
+        upper_threshold = 0.1
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+Como puede observarse la curva se encuentra definida por debajo del límite delimitado por el $SpAUC$, lo cual coincide con el valor de `NA`, dado que no se puede calcular. Por otra parte, el $TpAUC$ define un límite que se ajusta a la forma de la curva (en este caso $0$, dado que $TPR = 0$) y por tanto es posible calcularlo.
+
+De forma general, ambas métricas se comprenden entre valores de $0.5$ y $1$, lo cual permite que sean fácilmente interpretables. Aunque ambas métricas se puedan interpretar fácilmente, dado que el $SpAUC$ define unos límites que no se ajustan para ciertas curvas con determinadas formas lo cual imposibilita su aplicación, haciendo más idóneo el $TpAUC$ el cual se ajusta a la curva y se puede aplicar independientemente de ella.
+
+Considerada la interpretabilidad de ambas métricas, ahora podemos contrastar la capacidad de distinguir entre curvas con igual $pAUC$ y que se cruzan.
+
+Del conjunto de datos, 917 predictores presentan un $pAUC$ al menos igual a otro; los cuales se agrupan en 407 grupos distintos en función de su $pAUC$. Para contrastar su capacidad de discriminación, al igual que en los casos anteriores, utilizaremos los predictores `ENSG00000177943` y `ENSG00000136783`, los cuales se corresponden con aquellos de mayor valor para el $pAUC$ en este subgrupo.
+
+```{r Índices de alta especificidad para ENSG00000177943 y ENSG00000136783, warning=FALSE}
+bind_rows(
+    "ENSG00000177943" = summarize_predictor(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        ENSG00000177943,
+        prognostic,
+        "fpr",
+        0.1
+    ),
+    "ENSG00000136783" = summarize_predictor(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        ENSG00000136783,
+        prognostic,
+        "fpr",
+        0.1
+    ),
+    .id = "Identifier"
+)
+```
+
+```{r Comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
+plot_roc_curve(
+         prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+         response = prognostic,
+         predictor = ENSG00000177943
+) + 
+    add_roc_curve(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000136783
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+Ambos predictores presentan un rendimiento ligeramente mejor que un clasificador aleatorio a nivel global, a diferencia de la región de interés, donde relativamente mejor. En este caso ambos predictores presentan un $SpAUC$ igual ($SpAUC = 0.5643124$). Lo cual se debe a que ambos presentan el mismo límite superior e inferior. 
+
+Por otra parte el $TpAUC$ toma valores distintos para cada uno de los predictores, dado que ajusta sus limites a las zonas definidas por ambas curvas.
+
+```{r Comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
+plot_partial_roc_curve(
+         prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+         response = prognostic,
+         predictor = ENSG00000177943,
+         ratio = "fpr",
+         threshold = 0.1
+) + 
+    add_partial_roc_curve(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000136783,
+        ratio = "fpr",
+        threshold = 0.1
+    ) +
+    add_tpauc_partially_proper_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000177943,
+        upper_threshold = 0.1,
+        lower_threshold = 0
+    ) +
+    add_tpauc_partially_proper_lower_bound(
+        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+        response = prognostic,
+        predictor = ENSG00000136783,
+        upper_threshold = 0.1,
+        lower_threshold = 0
+    ) +
+    add_chance_line() +
+    add_threshold_line(0.1, "fpr")
+```
+Para este caso en particular, ambos predictores poseen el mismo límite inferior, sin embargo sus límite superiores serán distintos dado que ambas poseen un $TPR$ distinto, para el $FPR_2$. Así el $TpAUC$ toma valores diferentes para cada predictor, pudiendo establecer que el predictor `ENSG00000177943` ($TpAUC = 0.8111201$) rinde mejor que `ENSG00000136783` ($TpAUC = 0.7711047$).
+
+Esta afirmación se puede contrastar en todo el conjunto de datos, es decir en todos los grupos:
+
+```{r Número de desempates}
+metric_prognostic_fpr$data %>%
+    filter(pauc != 0) %>%
+    group_by(pauc) %>%
+    filter(n() > 1) %>%
+    mutate(
+        spauc_equal = all(
+            map_lgl(sp_auc, \(x) near(x, sp_auc[[1]]))
+        ),
+        tpauc_equal = all(
+            map_lgl(tp_auc, \(x) near(x, tp_auc[[1]]))
+        )
+    ) %>%
+    summarize(
+        spauc_equal = all(spauc_equal),
+        tpauc_equal = all(tpauc_equal)
+    ) %>%
+    dplyr::count(spauc_equal, tpauc_equal)
+```
+
+De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un marcador que rinda mejor en ninguno de ellos, es más, no es capaz de aplicarse debido a la forma de la curva en 194 de ellos.
+
+Por otra parte el $TpAUC$ es capaz de diferenciar
+
+
+<!--
+
+De los 374 predictores, con $pAUC > 0$ e igual al menos a otro predictor, agrupados en 174 grupos según el valor de $pAUC$, observamos como el $SpAUC$ no es capaz de diferenciar un predictor de mayor rendimiento en ningún caso. Además de no ser capaz de identificar un mejor predictor, cabe matizar que este índice solamente toma valores en 95 de los grupos mientras que en 79 de ellos no se encuentra definido.
+
+Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de los grupos, mientras que es incapaz de encontrar diferencias en 36 de ellos.
+
+Observando estos valores para todo el conjunto de datos, refuerza la afirmación de que ambos índices son fácilmente interpretables, sin embargo también refuerzan el hecho de que el $SpAUC$ no es totalmente adecuado en la practica, puesto que no puede aplicarse a situaciones donde la curva pase por debajo de la línea del azar. Además y al margen de ello, el $SpAUC$ tiene una menor capacidad de discriminación entre predictores a diferencia del $TpAUC$, el cual ha sido capaz de indentificar en la mayoría de empates el mejor predictor.
+
+-->
