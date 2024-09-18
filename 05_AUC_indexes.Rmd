@@ -1278,7 +1278,7 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
-*KLK3* no presenta un buen rendimiento a nivel global, sin embargo, en la región de interés presenta un rendimiento algo mejor esto pone de manifiesto su uso y relevancia clínica de regiones concretas de la curva. A pesar de ello, como se ha explicado antes el *KLK3* presenta un gran número de falsos positivos lo cual explica que otros predictores como *FOLH1* y *AMACR* presentan mejores puntuaciones no solo a nivel global y sino también en la región de alta especificidad. 
+*KLK3* no presenta un buen rendimiento a nivel global, sin embargo, en la región de interés presenta un rendimiento algo mejor esto pone de manifiesto su uso hasta la fecha y relevancia clínica de regiones concretas de la curva. A pesar de ello, como se ha explicado previamente el *KLK3* presenta un gran número de falsos positivos lo cual explica que otros predictores como *FOLH1* y *AMACR* presentan mejores puntuaciones no solo a nivel global y sino también en la región de alta especificidad.
 
 ```{r Marcadores de diagnóstico en alta especificidad, warning=FALSE}
 plot_partial_roc_curve(
@@ -1320,7 +1320,16 @@ plot_partial_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
-Si nos centramos en esta región, el $SpAUC$ califica a *AMACR* como el mejor de los predictores y muy por debajo al resto, a diferencia del $TpAUC$ que califica a *FOLH1* como el predictor de mayor rendimiento, pero similar a *AMACR*.
+Centrandonos en esta región, el $SpAUC$ califica a *AMACR* como el mejor de los predictores y al resto muy por debajo, a diferencia del $TpAUC$ que califica a *FOLH1* como el predictor de mayor rendimiento, pero a un nivel similar de *AMACR*.
+
+Si contrastamos estos resultados, como se ha explicado, tanto el [*AMACR* ](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3794046/) como el *FOLH1* están sobrexpresados en pacientes con la enfermedad, pero actualmente el *FOLH1* presenta un mayor interés ya que además de un potencial uso a nivel de diagnóstico también lo presenta como [diana terpéutica](https://www.sciencedirect.com/science/article/pii/S2405456921001681). Esto refuerza la interpretación dada por el $TpAUC$ frente a los otros índices, donde tanto *AMACR* y el *FOLH1* presentan potencial como clasificadores, pero además clasifica a este último como ligeramente mejor que el primero.
+
+Finalmente si seleccionamos alguno de los primeros marcadores identificados por el $TpAUC$, puede observarse que se encuentran relacionados con la enfermedad, como es el caso de *ESRP2* (`ENSG00000103067 `) al cual estudios recientes también lo describen como tener un papel relevante en el [desarrollo de la enfermedad](https://www.nature.com/articles/s41388-023-02838-9).
+
+```{r Gen ESRP2}
+metrics_diagnostic_fpr$data %>% filter(identifier == "ENSG00000103067") %>% select(-curve_shape)
+```
+
 
 
 
