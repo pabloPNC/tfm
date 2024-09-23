@@ -1241,11 +1241,11 @@ Por otra parte, los índices $TpAUC$ y $FpAUC$ además de ser aplicables a cualq
 
 Aunque la solución de estas limitaciones permite calificar al $TpAUC$ y $FpAUC$ como mejores métricas, estas deben de seguir siendo capaces de encontrar marcadores clínicamente relevantes en los casos de estudio. El rendimiento de estos índices puede comprobarse con el conjunto de datos generado para diagnóstico y pronóstico de cáncer de prostata.
 
-Desde la primera vez que fue descrito, el antígeno específico de prostata (PSA) ha sido utilizado en los planes de diagnóstico y tratamiento de pacientes con cáncer de próstata. Desde su aplicación, la mortalidad y el número de diagnósticos en estadíos avanzados de la enfermedad se ha reducido, sin embargo este biomarcador presenta [ciertas limitaciones](https://www.mdpi.com/1422-0067/23/22/14257). Aunque el PSA es específico del tejido, este puede presentarse en lesiones benignas, es decir generando falsos positivos; además a la hora de realizar una evaluación de riesgo requiere de técnicas y métricas adicionales.
+Desde la primera vez que fue descrito, el antígeno específico de prostata (PSA) ha sido utilizado en los planes de diagnóstico y tratamiento de pacientes con cáncer de próstata. Desde su aplicación, la mortalidad y el número de diagnósticos en estadíos avanzados de la enfermedad se ha reducido, sin embargo este biomarcador presenta [ciertas limitaciones](https://www.mdpi.com/1422-0067/23/22/14257). Aunque el PSA es específico del tejido, este puede presentarse en lesiones benignas, es decir generando falsos positivos; además a la hora de realizar una estratificación del riesgo de un paciente requiere de técnicas y métricas adicionales.
 
 El nombre de PSA es utilizado en el ámbito clínico, en otros ámbitos es conocida como kallikrein related peptidase 3 (*KLK3*) una proteasa expresada en las células del tejido. Este marcador se encuentra entre los descritos en el conjunto de datos, con el identificador `ENSG00000142515`.
 
-```{r Métricas KLK3}
+```{r Métricas KLK3 diagnóstico}
 inner_join(
     metrics_diagnostic_tpr$data %>% filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
     metrics_diagnostic_fpr$data %>% filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
@@ -1329,6 +1329,139 @@ Finalmente si seleccionamos alguno de los primeros marcadores identificados por 
 ```{r Gen ESRP2}
 metrics_diagnostic_fpr$data %>% filter(identifier == "ENSG00000103067") %>% select(-curve_shape)
 ```
+Por otra parte como métrica para distinguir entre pacientes con una enfermedad más o menos agresiva, el *KLK3* de forma global presenta un rendimiento peor que un clasificador aleatorio.
+
+```{r Métricas KLK3 estratificación de riesgo}
+inner_join(
+    metric_prognostic_fpr$data %>% filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
+    metric_prognostic_tpr$data %>% filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
+    join_by(identifier, auc),
+    suffix = c("_spec", "_sens")
+)
+```
+```{r ROC KLK3 estratificación de riesgo}
+plot_roc_curve(
+    prognostic_dataset %>% mutate(prognostic = disease$prognostic),
+    response = prognostic,
+    predictor = ENSG00000142515
+) +
+    add_chance_line()
+```
+
+La curva $ROC$ del predictor se muestra por debajo de la línea del azar, confirmando ese rendimiento peor que un clasificador completamente aleatorio. El cálculo de la curva se ha realizado considerando la condición de interés de padecer una forma de la enfermedad más agresiva, de esta forma puede explicarse que el *KLK3* rinda mejor identificando formas de la enfermedad menos agresivas.
+
+```{r Inversión de la curva ROC de KLK3 en estratificación de riesgo, warning=FALSE}
+
+inverse_prognostic_dataset <- prognostic_dataset %>%
+    mutate(
+        prognostic = disease$prognostic
+    )
+
+inverse_prognostic_dataset$prognostic <- fct_recode(
+    inverse_prognostic_dataset$prognostic,
+    "1" = "0",
+    "0" = "1"
+)
+
+inverse_prognostic_dataset$prognostic <- fct_relevel(
+    inverse_prognostic_dataset$prognostic,
+    "0"
+)
+
+tpr_metrics <- summarize_predictor(
+    inverse_prognostic_dataset,
+    predictor = ENSG00000142515,
+    response = prognostic,
+    ratio = "tpr",
+    threshold = 0.9
+)
+fpr_metrics <- summarize_predictor(
+    inverse_prognostic_dataset,
+    predictor = ENSG00000142515,
+    response = prognostic,
+    ratio = "fpr",
+    threshold = 0.1
+)
+
+
+inner_join(
+    fpr_metrics,
+    tpr_metrics,
+    join_by(auc),
+    suffix = c("_spec", "_sens")
+) %>%
+    mutate(
+        identifier = "ENSG00000142515",
+        .before = 1
+    ) %>%
+    select(
+        !starts_with("curve_shape")
+    )
+```
+```{r ROC inversa de KLK3}
+plot_roc_curve(
+    inverse_prognostic_dataset,
+    response = prognostic,
+    predictor = ENSG00000142515
+) +
+    add_chance_line()
+```
+
+Invirtiendo la curva, las diversas métricas presentan cierta mejora a excepción del $TpAUC$, pero en cualquier caso, estas distan de ser ideales en el ámbito clínico.
+
+Para realizar un mejor contraste de las métricas obtenidas podemos tomar como referencias predictores utilizados en test de evaluación de riesgos ya [utilizados](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9201356/) como por ejemplo: [Decipher](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3691249/) y [Oncotype](https://pubmed.ncbi.nlm.nih.gov/24836057/).
+
+
+```{r Identificadores de marcadores en tests Decipher y Oncotype}
+decipher <- tibble::tribble(
+    ~name, ~ensemble,
+    "LASP1", "ENSG00000002834",
+    "IQGAP3", "ENSG00000183856",
+    "NFIB", "ENSG00000147862",
+    "S1PR4", "ENSG00000125910",
+    "THBS2", "ENSG00000186340",
+    "ANO7", "ENSG00000146205",
+    "PCDH7", "ENSG00000169851",
+    "MYBPC1", "ENSG00000196091",
+    "EPPK1", "ENSG00000261150",
+    "PBX1", "ENSG00000185630",
+    "NUSAP1", "ENSG00000137804",
+    "ZWILCH", "ENSG00000174442",
+    "UBE2C", "ENSG00000175063",
+    "CAMK2N1", "ENSG00000162545",
+    "RABGAP1", "ENSG00000011454",
+    "TNFRSF19", "ENSG00000127863"
+)
+
+oncotype <- tibble::tribble(
+    ~name, ~ensemble,
+    "BGN", "ENSG00000182492",
+    "COL1A1", "ENSG00000108821",
+    "SFRP4", "ENSG00000106483",
+    "FLNC", "ENSG00000128591",
+    "GSN", "ENSG00000148180",
+    "TPM2", "ENSG00000198467",
+    "GSTM2", "ENSG00000213366",
+    "TPX2", "ENSG00000088325",
+    "LAMB3", "ENSG00000196878",
+    "FAM13C", "ENSG00000148541",
+    "KLK2", "ENSG00000167751",
+    "AZGP1", "ENSG00000160862",
+    "SRD5A2", "ENSG00000277893",
+    "DUSP1", "ENSG00000120129",
+    "FOS", "ENSG00000170345"
+)
+
+metric_prognostic_tpr$data %>%
+    arrange(desc(fp_auc)) %>%
+    filter(
+        identifier %in% oncotype$ensemble |
+        identifier %in% decipher$ensemble
+    )
+```
+Entre los datos podemos encontrar algunos de los marcadores utilizados en estos tests, los cuales presentan puntuaciones relativamente bajas a execepción del $FpAUC$ que las puntua en mejor medida. 
+
+
 
 
 
