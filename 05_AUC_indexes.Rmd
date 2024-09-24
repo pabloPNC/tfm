@@ -1411,7 +1411,6 @@ Invirtiendo la curva, las diversas métricas presentan cierta mejora a excepció
 
 Para realizar un mejor contraste de las métricas obtenidas podemos tomar como referencias predictores utilizados en test de evaluación de riesgos ya [utilizados](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9201356/) como por ejemplo: [Decipher](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3691249/) y [Oncotype](https://pubmed.ncbi.nlm.nih.gov/24836057/).
 
-
 ```{r Identificadores de marcadores en tests Decipher y Oncotype}
 decipher <- tibble::tribble(
     ~name, ~ensemble,
@@ -1465,21 +1464,18 @@ Por otra parte algo similar sucede con los predictores `ENSG00000205364` (MTM1) 
 
 # 7. Discusión y conclusiones
 
-El desarrollo de nuevas tecnologías permite el análisis de un gran número de marcadores simultáneamente, donde un análisis basado en $AUC$ son utilizados habitualmente. En el ámbito clínico, regiones concretas de la curva pueden son más relevantes para tratar con los costes de diagnósticos erróneos, como consecuencia las métricas que evaluan estas regiones, como el $pAUC$, están ganando mayor interés. A pesar de ello esta métrica presenta limitaciones para su uso debido a su interpretabilidad, por lo que transformaciones alternativas para regiones concretas, son de mayor utilidad.
+El desarrollo de nuevas tecnologías permite el análisis de un gran número de marcadores simultáneamente, donde análisis basados en $AUC$ son utilizados habitualmente. En el ámbito clínico regiones concretas de la curva son más relevantes para tratar con los costes de diagnósticos erróneos. Así, las métricas que evaluan estas regiones, como el $pAUC$, están ganando mayor interés. A pesar de ello esta métrica presenta limitaciones para su uso debido a su interpretabilidad, por lo que transformaciones alternativas para trabajar en regiones concretas de la curva resultan de mayor utilidad.
 
-El $SpAUC$ fue la primera transformación del $pAUC$ para trabajar en regiones de alta especificidad. Aunque la métrica presenta una mayor interpretabilidad al comprender sus valores entre $0.5$ y $1$, no es aplicable a regiones que pasen por debajo de la línea de azar, limitando su uso. De forma similar para las regiones de alta sensibilidad se propuso el $NpAUC$, la cual aunque limitada por encima a tomar valores inferiores a $1$ no se encuentra limitada por debajo pudiendo tomar valores inferiores a $0.5$ en ciertas curvas.
+La principal contribución de este trabajo es analizar el rendimiento de las distintas métricas derivadas del $pAUC$ en regiones de interés. Utilizando un conjunto de datos generado con distintas muestras de cáncer de prostata, las métricas han sido evaluadas con respecto a su capacidad para encontrar marcadores de diagnóstico y estratificación de riesgos, escenarios donde condiciones de alta especificidad y sensibilidad son requeridas.
 
+El $SpAUC$ fue la primera transformación del $pAUC$ para trabajar en regiones de alta especificidad. Aunque la métrica presenta una mejor interpretabilidad al comprender sus valores entre $0.5$ y $1$, no es aplicable a regiones de la curva que pasan por debajo de la línea de azar. Estas regiones son comunes en la práctica, lo cual limita su uso. Este problema es resulto por el $TpAUC$, la cual además de tomar valores entre $0.5$ y $1$, puede aplicarse a regiones que pasen por debajo de la línea de azar.
 
+De forma similar para trabajar en regiones de alta sensibilidad se propuso el $NpAUC$. Aunque la métrica pueda tomar como máximo valores de $1$, no se encuentra limitada por debajo, pudiendo tomar valores inferiores a $0.5$ con predictores que presentan curvas con ciertas formas, lo cual dificulta su interpretación y aplicación a ciertos predictores. Estos problemas son resueltos por el $FpAUC$, el cual además de contener sus valores entre $0.5$ y $1$ se puede aplicar independientemente de la forma de la curva en la región de interés.
 
+Además de presentar una mejor interpretabilidad, el $TpAUC$ y $FpAUC$ han sido capaces de distinguir entre predictores que presentan el mismo $pAUC$ y cuyas curvas $ROC$ se cruzan, algo que hasta ahora no había sido posible con las anteriores métricas. Esto supone que tanto el $TpAUC$ y $FpAUC$ poseen una mayor capacidad de discriminación en estos casos, permitiendo la selección de marcadores que convencionalmente se habrían descartado y viceversa.
 
+Finalmente para considerar la relevancia clínica de las métricas, los resultados de cada métrica en el conjunto de datos han sido contrastados con predictores relevantes en el ámbito clínico. Con respecto a marcadores de diagnóstico, el $TpAUC$ otorga puntuaciones similares a los 2 marcadores que presentan mayor interés actualmente, a diferencia del $SpAUC$ que penaliza a uno de ellos.
 
+Por otra parte en codiciones de estratificación de riesgo, el $NpAUC$ presenta valores muy bajos para predictores presentes en el conjunto de datos y que actualmente se utilizan en tests de estratificación de riesgos, a diferencia del $FpAUC$ que les otorga puntuaciones mayores.
 
-
-
-
-
-
-
-
-
-
+Estos resultados, revelan la utilidad práctica que presentan métricas como el $TpAUC$ y $FpAUC$ frente al resto. Su facilidad para ser interpretadas y para discriminar entre marcadores altamente específicos o sensibles incentiva su uso en el ámbito clínico para la selección de marcadores que puedan ayudar en la toma de decisiones.
