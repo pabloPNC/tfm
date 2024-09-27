@@ -1,11 +1,4 @@
----
-title: "04_Common_markers_selection"
-author: "Pablo Navarro Carpio"
-date: "2024-08-07"
-output: html_document
----
-
-# 1. Importar librerias
+# Importar librerias
 
 ```{r Importar librerías}
 library(biomaRt)
@@ -14,7 +7,7 @@ library(tidyr)
 library(stringr)
 ```
 
-# 2. Importar datos
+# Importar datos
 
 Para esta sección utilizaremos el conjunto de datos generado anteriormente. El conjunto de datos contiene los niveles de expresión para distintas muestras de tejido además de las variables relevantes para hacer las predicciones. De la misma forma, importaremos los marcadores seleccionados provenientes de las células cancerosas.
 
@@ -23,13 +16,13 @@ markers_cluster_8 <- readRDS("./rds_objects/02_markes_cluster_8.rds")
 tcga_data <- readRDS("./rds_objects/03_tcga_data.rds")
 ```
 
-# 3. Selección de genes de interés
+# Selección de genes de interés
 
 El conjunto de datos contiene contiene información para 60664 genes en 554 muestras distintas. Estas datos han sido extraídos utilizando técnicas de secuenciación masiva, por lo que los datos representan un promedio de las células en cada muestra. Esto puede añadir cierto ruido al estudio, puesto que en la muestra existirán diversos tipos celulares, algunos de los cuales no serán de nuestro interés.
 
 Dado que anteriormente hemos identificado DEG de células cancerosas de protata, podemos centrar el análisis en ellos. De esta forma podremos asegurarnos que estaremos trabajando con genes relevantes en nuestras células de estudio.
 
-## 3.1. Equivalencias entre identificadores
+## Equivalencias entre identificadores
 
 Los marcadores de las células y los datos utilizan distintos identificadores, por lo que tendremos que transformarlos buscando equivalencias. Esta tarea la podemos realizar utilizando el paquete `biomaRt`. Este paquete nos permite acceder a diversos portales de información, entre ellos se encuentra [Ensembl](https://www.ensembl.org/index.html) el cual utiliza estos identificadores.
 
@@ -81,7 +74,7 @@ Actualmente el campo del nombre para estos genes se corresponde al otorgado por 
 
 De esta forma, dado que para incluir correcciones más recientes usaremos el ensamblado más reciente (GRCh38.14), no consideraremos estos genes, a fin de evitar posibles errores.
 
-## 3.2. Filtrado por los genes identificados
+## Filtrado por los genes identificados
 
 Una vez seleccionados los genes de interés, obtendremos el subconjunto de los datos de interés. Para ello en primer lugar añadiremos a la tabla de marcadores los identificadores.
 
@@ -143,7 +136,7 @@ length(unique(markers_in_tcga$gene))
 En pasos anteriores, cuando se seleccionaron macadores los marcadores comunes entre los obtenidos en las muestras y los disponibles en Ensembl, se encontraron 2586; y de estos 2584 se han encontrado en las muestras del TCGA.
 
 
-# 4. Serialización
+# Serialización
 
 Para poder seguir trabajando más adelante con ellos, guardaremos los marcadores seleccionados, así como el conjunto de datos filtrado.
 

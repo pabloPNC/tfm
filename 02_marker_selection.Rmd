@@ -1,11 +1,4 @@
----
-title: "Marker selection"
-author: "Pablo Navarro Carpio"
-date: "31/07/2024"
-output: html_document
----
-
-# 1. Importar librerías y datos
+# Importar librerías y datos
 
 ```{r Librerias}
 library(Seurat)
@@ -22,13 +15,13 @@ luminal_cells <- readRDS("./rds_objects/01_luminal_object.rds")
 significative_markers <- readRDS("./rds_objects/01_significative_markers.rds")
 ```
 
-# 2. DEG en células luminales
+# DEG en células luminales
 
 Como se ha explicado anteriormente, el objeto importado es un `SeuratObject` que contiene un subconjunto de todas las células del experimento, aquellas que han sido identificadas como células luminales de la prostata.
 
 Los tejidos de cáncer de prostrata presentan una gran heterogeneidad, incluso en células del mismo tipo, por lo que es conveniente intentar encontrar subpoblaciones de células dentro de este subconjunto. Está búsqueda puede además mostrar las causas de las diferencias entre estas poblaciones, por ejemplo: una mayor expresión de genes relacionados con el desarrollo de la enfermedad, lo cual puede ser un indicativo de células malignas o bien que estén en proceso de carcinogénesis.
 
-## 2.1. Caracterización y selección de los clusters
+## Caracterización y selección de los clusters
 
 Podemos aplicar un proceso similar a como se han encontrado los marcadores para los clusters todos, a clusters concretos.
 
@@ -112,9 +105,9 @@ FeaturePlot(
 
 Teniendo en cuenta estos resultados, seleccionaremos las células del cluster 8 para seguir trabajando con ellas. La razón de ello se debe a que estamos interesados en estudiar genes presentes en células cancerosas que puedan ser utilizados como biomarcadores de diagnostico así como de pronóstico o estratificación, de esta forma las células de este cluster son más relevantes que células normales en proceso de transformación, es decir del cluster 14.
 
-# 3. Selección de subpoblaciones
+# Selección de subpoblaciones
 
-## 3.1. Repetición del flujo de trabajo
+## Repetición del flujo de trabajo
 
 En el apartado anterior se han seleccionado las células luminales que presentan cierto grado de malignididad. Sin embargo, como se ha explicado anteriormente, también puede ser interesante comprobar si dentro del grupo seleccionado se observa también cierta variabilidad encontrando células con distintos papeles.
 
@@ -185,7 +178,7 @@ DimPlot(
     label = TRUE
 )
 ```
-## 3.2. Interpretación de resultados
+## Interpretación de resultados
 
 En la imagen se pueden observar 2 subgrupos relativamente bien separados. Esto puede ser causa, de forma similar que en el caso anterior, de la heterogeneidad de las células cancerosas, por lo que sería conveniente identificar de nuevo marcadores diferenciados que puedan arrojar algo de luz sobre el papel de cada una de las subpoblaciones.
 
@@ -206,7 +199,7 @@ La formación de los clusters, no deja de ser un proceso matemático que aplicam
 
 De esta forma, la interpretabilidad de estos resultados juega un papel crucial para no afectar a los análisis aguas abajo. En este caso, el cluster 8 ya contaba con un relativo bajo número de células, en donde sí hemos podido contrastar que estabamos trabajando con células luminales de prostata cancerosas. Tras hacer el subclustering y no poder validar de alguna forma las subpoblaciones obtenidas, seguiremos trabajando con el cluster 8 en su totalidad.
 
-# 4. Selección de marcadores
+# Selección de marcadores
 
 Una vez decidido que se trabajará con el cluster 8 en su totalidad se deben seleccionar los marcadores de dicho grupo que utilizaremos en análisis posteriores. Para ello lugar seleccionaremos los DEG sobreexpresados con respecto a los demás tejidos (`avg_log2FC` > 1).
 

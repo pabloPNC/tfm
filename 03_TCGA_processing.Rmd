@@ -1,11 +1,4 @@
----
-title: "TCGA processing"
-author: "Pablo Navarro Carpio"
-date: "04/08/2024"
-output: html_document
----
-
-# 1. Importar librerias
+# Importar librerias
 
 ```{r Importar librerías}
 library(readr)
@@ -16,7 +9,7 @@ library(tidyr)
 library(forcats)
 ```
 
-# 2. Importar datos
+# Importar datos
 
 Para esta sección trabajaremos con los datos obtenidos de The Cancer Genome Atlas (TCGA). Los datos ya han sido descargados y se encuentran en el directorio "./tcga_data".
 
@@ -26,7 +19,7 @@ En ella podemos encontrar distintos archivos que utilizaremos para hacer el proc
 + *gdc_download*. Directorio que contiene distintos directorios, cada uno de ellos con un archivo. Este archivo contiene las lecturas para una muestra de tejido.
 + *gdc_sample_sheet*. Un fichero `tsv`que contiene información sobre los archivos descargados. En su mayoría contiene identificadores de las muestras y archivos que hemos descargado, el tipo de experimento, tipo de tumor, etc. Es de utilidad en su mayoría para relacionar otros archivos de metadatos con su respectiva muestra.
 
-## 2.1. Preprocesamiento del archivo clinical y gdc_sample_sheet
+## Preprocesamiento del archivo clinical y gdc_sample_sheet
 
 Dado que estamos trabajando con un gran número de archivos de distinto tipo, datos y metadatos, podemos simplificar la tarea uniendo los archivos de metadatos en un solo fichero, es decir `clinical.tsv` y `gdc_sample_sheet.tsv`.
 
@@ -50,7 +43,7 @@ tcga_data_folder <- "./tcga_data/gdc_download_20240611_200434.803317"
 file_clinical_path <- "./file_clinical_sheet.csv"
 ```
 
-# 3. Creación de matriz de cuentas
+# Creación de matriz de cuentas
 
 Como se ha explicado en el apartado anterior, estamos trabajando con una gran número de archivos. Para el caso de los metadatos, los archivos se han combinado en uno solo para facilitar su acceso a ellos. Se puede realizar un procedimiento similar con cada uno de los archivos de datos, pero para ello debemos entender la estructura de estos.
 
@@ -67,7 +60,7 @@ ENSG00000000003.15	TSPAN6	protein_coding	2743	1379	1364	72.3539	20.8836	20.1004
 ENSG00000000005.6	TNMD	protein_coding	12	5	7	0.9728	0.2808	0.2702
 ENSG00000000419.13	DPM1	protein_coding	745	398	347	73.8513	21.3158	20.5164
 ```
-## 3.1. Importar archivos de lecturas
+## Importar archivos de lecturas
 
 Conociendo su estructura, podemos comenzar a procesar los datos. El primer paso, correspondería con importar estos datos, para ello podemos definir la siguiente función.
 
@@ -84,7 +77,7 @@ to_tsv <- function(file_path) {
 
 La función simplemente lee el archivo de la ruta introducida (`file_path`), omite las 6 primeras líneas e importa los datos utilizando un tabulador como elemento de separación. Tras ello simplemente re-asigna el nombre de las columnas y devuelve la matriz generada.
 
-## 3.2. Selección de variables y renombrado
+## Selección de variables y renombrado
 
 Una vez podemos importar un conjunto de datos, podemos decidir que variables utilizar. 
 
@@ -121,7 +114,7 @@ rename_col <- function(data, sample_id) {
 
 La función simplemente utilizará como entrada una matriz de cuentas y un nombre indicado. Esta renombrará la columna `unstranded` al nombre que especifiquemos (más adelante usaremos el id de la muestra) y seleccionará dicha columna junto con la que contiene los identificadores de los genes.
 
-## 3.3. Unión de archivos
+## Unión de archivos
 
 A pesar de que podamos procesar cada uno de los datos individualmente, sería conveniente juntarlos en una sola matriz, donde cada una de las columnas representase las cuentas de un gen de una muestra y las filas indicasen el gen para el que se están realizando los conteos.
 
@@ -139,7 +132,7 @@ join_count_matrices <- function(count_matrix_a, count_matrix_b) {
 }
 ```
 
-## 3.4. Construcción de la matriz de cuentas
+## Construcción de la matriz de cuentas
 
 Las funciones que hemos creado funcionan de forma individual para una sola matriz o a lo sumo 2, cuando las unimos. Sin embargo podemos utilizar estas funciones para que se apliquen a una serie de ellas en su lugar.
 
@@ -167,14 +160,14 @@ merged_matrices <- as.data.frame(purrr::reduce(count_matrices, join_count_matric
 rownames(merged_matrices) <- merged_matrices$gene_id
 ```
 
-# 4. Preparación de la matriz
+# Preparación de la matriz
 
 En pasos subsiguientes necesitaremos realizar una serie de cálculos sobre la matriz, por ello se necesitará que está cumpla lo siguiente:
 
 1. Los genes deben encontrarse en las columnas de la matriz
 1. Debemos tener una variable binaria, que represente la variable a predecir (e.g. si la muestra se ha obtenido de un paciente enfermo o no)
 
-## 4.1. Pivotado de la matriz
+## Pivotado de la matriz
 
 Una vez hemos creado la matriz de cuentas, tendremos para realizar los cálculos sobre ella. Idealmente, deberemos tener los genes en las columnas y los casos (muestras) en las filas.
 
@@ -197,7 +190,7 @@ pivoted_matrix <- merged_matrices %>%
 
 De esta forma, logramos que los genes se encuentren en la parte de las columnas y cada entrada se corresponda con la muestra de un paciente.
 
-## 4.2. Cálculo de Gold Standards
+## Cálculo de Gold Standards
 
 Una vez se ha transformado la matriz, se pueden incluir las variables a predecir, es decir aquellas que representen el patrón que sucede en la realidad, es decir los "Gold Standards". En nuestro caso utilizaremos variables binarias, que nos permitan evaluar los genes seleccionados como sus predictores.
 

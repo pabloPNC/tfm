@@ -1,11 +1,4 @@
----
-title: "05_AUC_indexes"
-author: "Pablo Navarro Carpio"
-date: "2024-08-14"
-output: html_document
----
-
-# 1. Importar librerías y datos
+# Importar librerías y datos
 
 ```{r Importar librerías}
 library(pROC)
@@ -23,9 +16,9 @@ Para esta sección necesitaremos el conjunto de datos generado en la anterior se
 roc_data <- readRDS("./rds_objects/04_filtered_tcga_data.rds")
 ```
 
-# 2. AUCs
+# AUCs
 
-## 2.1. Introducción
+## Introducción
 
 En la literatura, 2 de las aproximaciones estadísticas más usadas para evaluar y comparar el rendimiento de una función o clasificador binario han sido las curvas $ROC$ (Característica Operativa del Receptor) y el área bajo dichas curvas ($AUC$).
 
@@ -33,7 +26,7 @@ El principal objetivo de un clasificador binario es discrimar instancias con una
 
 Cuando se trabaja con marcadores continuos, estos pueden ser dicotomizados en instancias positivas y negativas seleccionando una de las puntuaciones del marcador como un punto de corte, o umbral de decisión. Las curva $ROC$ representa los valores de $TPR$ y $FPR$ para cada uno de los umbrales de decisión de un marcador. Dado que estos puntos se calculan para todo un rango de umbrales, el $AUC$ actúa como una métrica global, mostrando los intercambios entre ambos parámetros de la curva, la ganancia o perdida de una métrica frente a otra.
 
-## 2.2. Cálculo de AUCs para diagnóstico
+## Cálculo de AUCs para diagnóstico
 
 Una vez se ha comprendido la teoría, podemos proceder a realizar los cálculos. Para ello utilizaremos la función `pROC::auc`, que calcula dicho parámetro utilizando una la variable para hacer la predicción (`predictor`) y una variable que contenga la respuesta a dicha predicción (`response`).
 
@@ -45,7 +38,7 @@ roc_data$disease <- fct_relevel(roc_data$disease, c("0", "1"))
 
 Dado que en nuestro caso, buscaremos repetir el proceso para cada una de las variables utilizaremos la función `purrr::map_dbl`.
 
-```{r Cálculo de AUCs para diagnóstico}
+```{r Cálculo de AUCs para diagnóstico, cache=TRUE}
 diagnostic_dataset <- roc_data %>% select(
     -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
     )
@@ -62,7 +55,7 @@ auc_diagnostic <- map_dbl(
 
 La función iterará sobre las columnas de los predictores y aplicará la función sobre cada uno de ellos. Como en este caso, buscaremos comprobar su validez como marcadores de diagnóstico, seleccionaremos la variable `disease` como la variable de respuesta.
 
-## 2.3. Cálculo de AUCs para pronóstico
+## Cálculo de AUCs para pronóstico
 
 De forma similar a la anterior sección, podemos calcular que marcadores será mejores predictores con respecto a establecer un pronóstico para la enfermedad.
 
@@ -76,7 +69,7 @@ disease[["prognostic"]] <- fct_relevel(disease[["prognostic"]], c("0", "1"))
 
 Una vez realizado el filtrado, podemos realizar el mismo procedimiento.
 
-```{r Cálculo de AUCs para pronóstico}
+```{r Cálculo de AUCs para pronóstico, cache=TRUE}
 prognostic_dataset <- disease %>% select(
     -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
     )
@@ -91,9 +84,9 @@ auc_prognostic <- map_dbl(
 )
 ```
 
-# 3. pAUC
+# pAUC
 
-## 3.1. Introducción
+## Introducción
 
 En ciertos contextos el estudio de la curva ROC en su totalidad no es de interés. En aplicaciones médicas y en otros campos, suelen seleccionarse ciertos rangos de la curva debido al interés por unos valores concretos de $TPR$ o $FPR$.
 
@@ -101,7 +94,7 @@ Por ejemplo en un contexto de diagnóstico, un marcador con un bajo $FPR$ (alta 
 
 En estas situaciones el area parcial de la curva ROC ($pAUC$) atrae mucha más atención, ya que esta métrica sintetiza la información en la región de interés en lugar de en toda la curva.
 
-## 3.2. Cálculo de pAUCs en regiones de alta especificidad
+## Cálculo de pAUCs en regiones de alta especificidad
 
 Explicada la importancia de trabajar en regiones concretas, podemos transladar la explicación a nuestro caso.
 
@@ -111,7 +104,7 @@ Sin embargo, el tratamiento para estas enfermedades es agresivo y debe considera
 
 Para trabajar en condiciones de alta especificidad, seleccionaremos arbitrariamente rangos de $TPR$ contenidos en un intervalo de $(0.9,1)$. Para realizar estos cálculos utilizaremos de nuevo la función `pROC::auc` esta vez indicando que se limite a la especificidad (`partial.auc.focus = "spec"`) y sobre un rango concreto (`partial.auc = c(0.9, 1)`).
 
-```{r Cálculo de pAUC en especificidad para diagnóstico}
+```{r Cálculo de pAUC en especificidad para diagnóstico, cache=TRUE}
 pauc_sp_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -126,7 +119,7 @@ pauc_sp_diagnostic <- map_dbl(
 
 De forma similar, el pronóstico determinado para un paciente es relevante a la hora de seleccionar un tratamiento más o menos agresivo. Podríamos pensar de forma similar al escenario del caso de diagnóstico, un falso positivo puede tener consecuencias graves. Por ello consideraremos también condiciones de alta especificidad para la determinación de un pronóstico.
 
-```{r Cálculo de pAUC en especificidad para pronóstico}
+```{r Cálculo de pAUC en especificidad para pronóstico, cache=TRUE}
 pauc_sp_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
@@ -139,13 +132,13 @@ pauc_sp_prognostic <- map_dbl(
 )
 ```
 
-## 3.3. Cálculo de pAUCs en regiones de alta sensibilidad
+## Cálculo de pAUCs en regiones de alta sensibilidad
 
 De forma similar al caso anterior podemos trasladar el caso de estudio a condiciones de alta sensibilidad. Escenarios donde se require una alta sensibilidad vienen dados normalmente por enfermedades que son fatales si no es tratan. Cometer un falso negativo puede implicar la muerte del paciente.
 
 Hacer un mal pronóstico del paciente puede suponer graves consecuencias, por lo que a la hora de realizarlo puede ser importante considerar una alta sensibilidad. De modo que para calcular los índices, simplemente realizaremos el procedimiento anterior indicando que utilizaremos la sensibilidad (`partial.auc.focus = "sens"`).
 
-```{r Cálculo de pAUC en sensibilidad para pronóstico}
+```{r Cálculo de pAUC en sensibilidad para pronóstico, cache=TRUE}
 pauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
@@ -160,7 +153,7 @@ pauc_sn_prognostic <- map_dbl(
 
 Finalmente y aunque quizá menos interesante desde el punto de vista clínico, pero también podríamos considerar relevante un contexto de alta sensibilidad para el diagnóstico de la enfermedad. Como hemos explicado antes, un diagnóstico temprano puede ser relevante en relación a evitar la muerte del paciente, por ello también podría llegar a considerarse este índice.
 
-```{r Cálculo de pAUC en sensibilidad para diagnóstico}
+```{r Cálculo de pAUC en sensibilidad para diagnóstico, cache=TRUE}
 pauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -173,9 +166,9 @@ pauc_sn_diagnostic <- map_dbl(
 )
 ```
 
-# 4. Índices derivados de pAUC
+# Índices derivados de pAUC
 
-## 4.1. Problemas del pAUC
+## Problemas del pAUC
 
 Aunque el $pAUC$ puede ser útil para trabajar en regiones de ínteres en la curva $ROC$ no está libre de fallas.
 
@@ -203,9 +196,9 @@ Además de por su interpretabilidad, la métrica presenta problemas cuando dos m
 
 Para lidiar con estos problemas se han desarrollado diferentes transformaciones en los diversos índices, tanto en especificidad como en sensibilidad.
 
-## 4.2. Índices para la especificidad
+## Índices para la especificidad
 
-### 4.2.1. SpAUC
+### SpAUC
 
 Una de las primeras transformaciones [propuestas por McClish](https://journals.sagepub.com/doi/10.1177/0272989X8900900307), es el área parcial bajo curva estandarizada ($SpAUC$).
 
@@ -225,7 +218,7 @@ El problema que presenta la métrica, es que asume el mismo límite inferior par
 
 Conociendo sus ventajas y desventajas, calcularemos el índice para contrastarlo con otros métodos. Para ello utilizaremos también la función `pROC::auc` indicando el argumento `partial.auc.correct = TRUE` para que aplique la corrección descrita por McClish. Además indicaremos `allow.invalid.partial.auc.correct = FALSE`, de esta forma la función no calculará el índice (aunque sea posible) si la curva está descrita por debajo del area mínima, puesto que el límite inferior no está bien definido, en su lugar devolverá un `NA`.
 
-```{r Cálculo de SpAUC para diagnóstico, warning=FALSE}
+```{r Cálculo de SpAUC para diagnóstico, warning=FALSE, cache=TRUE}
 spauc_sp_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -240,8 +233,8 @@ spauc_sp_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de SpAUC para pronóstico, warning=FALSE}
-spauc_sp_prognostic<- map_dbl(
+```{r Cálculo de SpAUC para pronóstico, warning=FALSE, cache=TRUE}
+spauc_sp_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
     partial.auc = c(0.9, 1),
@@ -255,7 +248,7 @@ spauc_sp_prognostic<- map_dbl(
 )
 ```
 
-### 4.2.2. TpAUC
+### TpAUC
 
 Para solventar los problemas que el $SpAUC$ todavía presenta, [Vivo et al. han propuesto](https://link.springer.com/article/10.1007/s11634-017-0295-9) un índice alternativo para rangos especificidades concretos, el "tighter partial area index" $TpAUC$. Este nuevo índice, encuentra nuevos límites todavía más ajustados y teniendo en cuenta la forma que puede adoptar la curva $ROC$, es decir, siendo compatible con curvas que pasan por debajo de la diagonal o son inadecuadas.
 
@@ -297,7 +290,7 @@ De forma similar, procederemos a calcularlo para contrastarlo con las demás mé
 
 La función utiliza como entrada un dataset donde la primera columna se corresponda con la respuesta y las siguientes los predictores.
 
-```{r Cálculo de TpAUC para diagnóstico}
+```{r Cálculo de TpAUC para diagnóstico, cache=TRUE}
 tpauc_sp_diagnostic_assay <- tpAUC(
     dataset = diagnostic_dataset %>% mutate(
         disease = roc_data$disease,
@@ -309,7 +302,7 @@ tpauc_sp_diagnostic_assay <- tpAUC(
 )
 ```
 
-```{r Cálculo de TpAUC para pronóstico}
+```{r Cálculo de TpAUC para pronóstico, cache=TRUE}
 tpauc_sp_prognostic_assay <- tpAUC(
     dataset = prognostic_dataset %>% mutate(
         prognostic = disease$prognostic,
@@ -331,9 +324,9 @@ names(tpauc_sp_diagnostic) <- colnames(diagnostic_dataset)
 names(tpauc_sp_prognostic) <- colnames(prognostic_dataset)
 ```
 
-## 4.3. Índices para la sensibilidad
+## Índices para la sensibilidad
 
-### 4.3.1. NpAUC
+### NpAUC
 
 Uno de los primeros índices enfocados a trabajar en regiones de alta sensibilidad, es el [propuesto por Jiang et al.](https://sci-hub.se/https://doi.org/10.1148/radiology.201.3.8939225), el índice del area parcial normalizado ($NpAUC$). Este índices es conceptualmente similar a $SpAUC$. Teniendo en cuenta que para este caso $TPR_2 = 1$ y $TPR_1 = TPR_0$ y $TPR_1 < TPR_2$ se definen los límites superiores e inferiores, dados por:
 
@@ -366,7 +359,7 @@ De forma similar a los otros índices procederemos a calcularlo para más tarde 
 
 El paquete cuenta con la función `ROCnGO::np_auc`, que nos permite calcular el índice con un procedimiento similar a los casos anteriores.
 
-```{r Cálculo de NpAUC para diagnóstico, warning=FALSE}
+```{r Cálculo de NpAUC para diagnóstico, warning=FALSE, cache=TRUE}
 npauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     \(gene) {
@@ -380,7 +373,7 @@ npauc_sn_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de NpAUC para pronóstico, warning=FALSE}
+```{r Cálculo de NpAUC para pronóstico, warning=FALSE, cache=TRUE}
 npauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
@@ -394,7 +387,7 @@ npauc_sn_prognostic <- map_dbl(
 )
 ```
 
-### 4.3.2. FpAUC
+### FpAUC
 
 De forma similar al $TpAUC$ con respecto al $SpAUC$, en casos de especificidad, [Vivo et al.](https://www.mdpi.com/2227-7390/9/21/2826) propusieron un índice que pudiera solventar las desventajas del $NpAUC$. Este índice, denominado "fitted partial area index" ($FpAUC$), además de conservar las ventajas propuestas por el anterior, solventa los problemas que presentaba.
 
@@ -442,7 +435,7 @@ De forma similar a los casos anteriores, calcularemos el índice para contrastar
 
 Para calcular el índice para los predictores, se utilizará la función `ROCnGO::fp_auc`:
 
-```{r Cálculo de FpAUC para diagnóstico, warning=FALSE}
+```{r Cálculo de FpAUC para diagnóstico, warning=FALSE, cache=TRUE}
 fpauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     \(gene) {
@@ -456,7 +449,7 @@ fpauc_sn_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de FpAUC para pronóstico, warning=FALSE}
+```{r Cálculo de FpAUC para pronóstico, warning=FALSE, cache=TRUE}
 fpauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
@@ -470,13 +463,13 @@ fpauc_sn_prognostic <- map_dbl(
 )
 ```
 
-# 5. Evaluación de índices
+# Evaluación de índices
 
 Hasta ahora se han calculado todos los índices para condiciones de alta sensibilidad y especificidad, enfocados a encontrar marcadores de diagnóstico así como de pronóstico. Sin embargo, como se ha ido explicando, cada índice presenta una serie de ventajas y desventajas.
 
 De esta forma, para poder evaluar cual de los siguientes índices presenta un mejor rendimiento a la hora de identificar un marcador para estas condiones, necesitaremos comparar sus resultados.
 
-## 5.1. Agrupar por condiciones
+## Agrupar por condiciones
 
 Para poder realizar comparaciones, deberemos agrupar las puntuaciones de los índices en las distintas condiciones.
 
@@ -520,13 +513,13 @@ indexes_sp_prognostic <- tibble(
 )
 ```
 
-## 5.2. Marcadores para diagnóstico
+## Marcadores para diagnóstico
 
-### 5.2.1. Métricas generales
+### Métricas generales
 
 Antes de proceder a analizar en detalle los distintos índices, se describiremos algunas métricas generales. Para ello, utilizaremos la función `ROCnGO::summarize_dataset`.
 
-```{r Cálculo de métricas globales sensibilidad, warning=FALSE, eval=FALSE}
+```{r Cálculo de métricas globales sensibilidad, warning=FALSE, cache=TRUE}
 metrics_diagnostic_tpr <- summarize_dataset(
     diagnostic_dataset,
     predictors = NULL,
@@ -537,7 +530,7 @@ metrics_diagnostic_tpr <- summarize_dataset(
 )
 ```
 
-```{r Cálculo de métricas globales especificidad, eval=FALSE, warning=FALSE}
+```{r Cálculo de métricas globales especificidad, warning=FALSE, cache=TRUE}
 metrics_diagnostic_fpr <- summarize_dataset(
     diagnostic_dataset,
     predictors = NULL,
@@ -554,11 +547,11 @@ De los 2651 genes seleccionados, 1722 (64.95%) presentan un $AUC \ge 0.5$. En re
 
 En regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 405 (23.51% y 15.27% del total) presentan curvas completamente concavas, 1032 (59.93% y 38.92% del total) presentan curvas parcialmente adecuadas y 285 (16.55% y 10.75% del total) contienen algún punto bajo la línea de azar.
 
-### 5.2.2. Índices de sensbilidad: $NpAUC$ y $FpAUC$
+### Índices de sensbilidad: $NpAUC$ y $FpAUC$
 
 Para evaluar en detalle los distintos índices, se exploraran algunas medidas de tendencia central.
 
-```{r Tendencia central de los parámetros}
+```{r Tendencia central de los parámetros de sensibilidad en diagnostico}
 summary(indexes_sn_diagnostic)
 ```
 
@@ -574,7 +567,7 @@ summarize_predictor(roc_data, ENSG00000169347, disease, "tpr", 0.9)
 
 A pesar de tener el máximo valor para $FpAUC$, el clasificador presenta valores reducidos en la métrica global, $AUC$, y en las parciales, $pAUC$ y $NpAUC$. Para explicar estos resultados, representaremos la curva $ROC$ para este predictor con la función `ROCnGO::plot_curve_roc`.
 
-```{r Predictor con límite inferior de NpAUC}
+```{r Predictor ENSG00000169347 con límite inferior de NpAUC}
 plot_roc_curve(roc_data, response = disease, predictor = ENSG00000169347) +
     add_chance_line() +
     add_tpr_threshold_line(0.9) +
@@ -590,7 +583,7 @@ Además de los puntos de la curva para el predictor, se ha representado el área
 
 Este no es el caso para el $FpAUC$, el cual establece su límite inferior en base a la forma de la curva.
 
-```{r Predictor con límite inferior de NpAUC}
+```{r Predictor con límite inferior de FpAUC}
 plot_partial_roc_curve(
     roc_data, 
     response = disease,
@@ -685,7 +678,7 @@ Como hemos visto anteriormente el $FpAUC$ adapta sus límites a los puntos defin
 
 Contrastando las métricas de todo el conjunto de datos podemos observar esta capacidad de discriminación entre predictores.
 
-```{r Número de desempates}
+```{r Número de desempates en índices de sensibilidad para diagnóstico}
 metrics_diagnostic_tpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -717,11 +710,11 @@ metrics_diagnostic_tpr$data %>%
 
 De los 246 grupos formados, el $NpAUC$ no es capaz de desempatar en ninguno de ellos, a diferencia del $FpAUC$ que es capaz de seleccionar el mejor clasificador en 47 de los grupos. Estos calculos sobre todo el conjunto de datos refuerzan la afirmación de que el $FpAUC$ tiene una mejos rcapacidad de dsicriminación que el $NpAUC$.
 
-### 5.2.3. Índices de especificidad: $SpAUC$ y $TpAUC$
+### Índices de especificidad: $SpAUC$ y $TpAUC$
 
 De la misma forma que con los índices para la sensibilidad, en primer lugar exploraremos algunas métricas de tendencia central.
 
-```{r Tendencia central de los parámetros}
+```{r Tendencia central de los parámetros de especificidad en diagnostico}
 summary(indexes_sp_diagnostic)
 ```
 
@@ -729,19 +722,20 @@ Con las métricas, de nuevo es posible observar como el $pAUC$ solo toma valores
 
 De las métricas podemos descatar que el $TpAUC$ toma valores igual a 0 cuando teorícamente debería estar comprendido entre $0.5$ y $1$.
 
-```{r TpAUCs igual a 0}
+```{r TpAUCs igual a cero}
 indexes_sp_diagnostic %>%
     filter(tpauc == 0)
 ```
 
 Una exploración de los datos, nos muestra como estos valores para el $TpAUC$ se corresponden con valores de $pAUC$ iguales a $0$. Para comprobarlo de forma visual, representaremos algunos de ellos.
 
-```{r Representación de predictores con pAUC = 0}
+```{r Representación de predictores con pAUC igual a 0}
 plot_roc_curve(
     roc_data,
     response = disease,
     predictor = ENSG00000169116
-) + add_roc_curve(
+) +
+    add_roc_curve(
         roc_data,
         response = disease,
         predictor = ENSG00000135378
@@ -752,7 +746,7 @@ plot_roc_curve(
 
 Como se observa en la figura, la curva de ambos predictores en la región de interés solo toma valores de $TPR = 0$, o en otras palabras no hay un area definida debajo de la curva. Si ampliamos la imagen, esto puede observarse con mayor claridad.
 
-```{r Ampliación de predictores con pAUC = 0}
+```{r Ampliación de predictores con pAUC igual a 0}
 plot_partial_roc_curve(
     roc_data,
     response = disease,
@@ -772,7 +766,7 @@ plot_partial_roc_curve(
 
 Habiendo comprobado el origen de estos valores atípicos, podemos recalcular las métricas filtrando los predictores con $pAUC = 0$ y comprobar que los valores del $TpAUC$ ahora sí que se encuentran limitados por abajo en $0.5$, de forma similar al $SpAUC$.
 
-```{r Tendencia central de los parámetros}
+```{r Tendencia central de los parámetros de especificidad filtrado}
 summary(indexes_sp_diagnostic %>% filter(pauc != 0))
 ```
 
@@ -907,7 +901,7 @@ Por otra parte el $TpAUC$ adapta sus límites a los puntos definidos por la curv
 
 Podemos contrastar esta capacidad de discriminación entre predictores con el resto del conjunto de datos:
 
-```{r Número de desempates}
+```{r Número de desempates en índices de especificidad para diagnóstico}
 metrics_diagnostic_fpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -933,13 +927,13 @@ Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de lo
 
 Observando estos valores para todo el conjunto de datos, refuerza la afirmación de que ambos índices son fácilmente interpretables, sin embargo también refuerzan el hecho de que el $SpAUC$ no es totalmente adecuado en la practica, puesto que no puede aplicarse a situaciones donde la curva pase por debajo de la línea del azar. Además y al margen de ello, el $SpAUC$ tiene una menor capacidad de discriminación entre predictores a diferencia del $TpAUC$, el cual ha sido capaz de indentificar en la mayoría de empates el mejor predictor.
 
-## 5.3. Marcadores para pronóstico
+## Marcadores para pronóstico
 
-### 5.3.1. Métricas generales
+### Métricas generales
 
 A continuación repetiremos los procedimientos previamente realizados, pero en esta ocasión aplicados a marcadores de pronóstico.
 
-```{r Cálculo de métricas globales sensibilidad-pronostico, warning=FALSE}
+```{r Cálculo de métricas globales sensibilidad-pronostico, warning=FALSE, cache=TRUE}
 metric_prognostic_tpr <- summarize_dataset(
     prognostic_dataset,
     predictors = NULL,
@@ -950,7 +944,7 @@ metric_prognostic_tpr <- summarize_dataset(
 )
 ```
 
-```{r Cálculo de métricas globales especificidad-pronostico, warning=FALSE}
+```{r Cálculo de métricas globales especificidad-pronostico, warning=FALSE, cache=TRUE}
 metric_prognostic_fpr <- summarize_dataset(
     prognostic_dataset,
     predictors = NULL,
@@ -967,11 +961,11 @@ De los genes seleccionados, 1015 (38.28 %) presentan un $AUC \ge 0.5$. En region
 
 Para regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $AUC \ge 0.5$, 127 (12.51%, un 4.79% del total) presentan curvas cóncavas, 377 (37.14%, un 14.22% del total) curvas parcialmente adecuadas y 511 (50.34%, un 19.27% del total) contienen algún punto bajo la línea de azar
 
-### 5.3.2. Índices de sensibilidad: $NpAUC$ y $FpAUC$
+### Índices de sensibilidad: $NpAUC$ y $FpAUC$
 
 De forma similar al procedimiento en condiciones de diagnóstico, exploraremos algunas medidas de tendencia central.
 
-```{r Tendencia central de los parámetros}
+```{r Tendencia central de los parámetros de sensibilidad en pronóstico}
 summary(metric_prognostic_tpr$data)
 ```
 En este contexto podemos volver a observar como el $pAUC$ toma valores inferiores a $0.5$ y el $FpAUC$ superiores. La única diferencia destacable es que ahora el $NpAUC$ solamente toma valores inferiores a $0.5$.
@@ -987,7 +981,7 @@ summarize_predictor(
     0.9
 )
 ```
-```{r Predictor con límite inferior de NpAUC}
+```{r Predictor ENSG00000185615 con límite inferior de NpAUC}
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     response = prognostic,
@@ -1053,7 +1047,7 @@ En este caso, los predictores no presentan un buen rendimiento a nivel global, a
 
 De forma similar a las condiciones de diagnóstico, dado que $FpAUC$ adapta sus límites a los puntos definidos por la curva y su forma, es capaz de distinguir entre predictores de igual $pAUC$ cuyas curvas se cruzan. Esta capacidad se puede observar en todo el conjunto de datos.
 
-```{r Número de desempates}
+```{r Número de desempates en índices de sensibilidad para pronóstico}
 metric_prognostic_tpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -1074,11 +1068,11 @@ metric_prognostic_tpr$data %>%
 ```
 De los 114 grupos con igual $pAUC$, el $FpAUC$ es capaz de desempatar en 38 de ellos, mientras que en su lugar el $NpAUC$ debido a como establece sus límites no es capaz de discriminar entre un mejor predictor de cada grupo.
 
-### 5.3.3. Índices de espcecificidad: $SpAUC$ y $TpAUC$
+### Índices de especificidad: $SpAUC$ y $TpAUC$
 
 Igual que en los casos anteriores, para realizar la evaluación de los índices exploraremos algunas métricas generales en primer lugar.
 
-```{r Tendencia central de los parámetros}
+```{r Tendencia central de los parámetros de especificidad en pronóstico}
 summary(metric_prognostic_fpr$data)
 ```
 
@@ -1169,7 +1163,7 @@ Ambos predictores presentan un rendimiento ligeramente mejor que un clasificador
 
 Por otra parte el $TpAUC$ toma valores distintos para cada uno de los predictores, dado que ajusta sus limites a las zonas definidas por ambas curvas.
 
-```{r Comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
+```{r Ampliación de comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
 plot_partial_roc_curve(
          prognostic_dataset %>% mutate(prognostic = disease$prognostic),
          response = prognostic,
@@ -1205,7 +1199,7 @@ Para este caso en particular, ambos predictores poseen el mismo límite inferior
 
 Esta afirmación se puede contrastar en todo el conjunto de datos, es decir en todos los grupos:
 
-```{r Número de desempates}
+```{r Número de desempates en índices de especificidad para pronóstico}
 metric_prognostic_fpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -1229,15 +1223,15 @@ De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un m
 
 Por otra parte el $TpAUC$ es capaz de diferenciar un mejor predictor en 323 grupos de los 407 totales. Este hecho refuerza que el $TpAUC$ es una mejor métrica a la hora de evaluar el rendimiento de un predictor, dado que es aplicable a cualquier tipo de curva y es capaz de discriminar entre predictores con igual $pAUC$, a diferencia del $SpAUC$.
 
-# 6. Resultados
+# Resultados
 
-## 6.1. Rendimiento de métricas
+## Rendimiento de métricas
 
 Hasta ahora hemos comparado con diversos predictores el rendimiento de diversos índices escalados de $pAUC$ tanto en condiciones de alta sensibilidad y de alta especificidad. De forma general, se ha podido observar como los índices de alta especificidad y sensibilidad respectivamente, $SpAUC$ y $NpAUC$ presentan ciertas limitaciones que son solventadas por $TpAUC$ y $FpAUC$. En primer lugar ambas métricas presentan límites inferiores y superiores que o bien imposibilitan su aplicación, siendo el caso del $SpAUC$ en curvas por debajo de la línea del azar, o bien dificultando su interpretación, en el caso del $NpAUC$ cuando una curva no ocupa la mitad de su límite superior dando valores inferiores a $0.5$. En segundo lugar, estas métricas no son capaces de distinguir entre predictores que presenten un mismo $pAUC$ y se crucen en la región de estudio, siendo incapaces de seleccionar el predictor de mejor rendimiento.
 
 Por otra parte, los índices $TpAUC$ y $FpAUC$ además de ser aplicables a cualquier curva independientemente de su forma, ser interpretables como métricas al comprender sus valores entre $0.5$ y $1$; son capaces de distinguir entre predictores que reportan $pAUC$ iguales y sus curvas se cruzan en la región de interés, cuestión que quedaba sin resolver hasta ahora.
 
-## 6.2. Relevancia clínica
+## Relevancia clínica
 
 Aunque la solución de estas limitaciones permite calificar al $TpAUC$ y $FpAUC$ como mejores métricas, estas deben de seguir siendo capaces de encontrar marcadores clínicamente relevantes en los casos de estudio. El rendimiento de estos índices puede comprobarse con el conjunto de datos generado para diagnóstico y pronóstico de cáncer de prostata.
 
@@ -1339,6 +1333,7 @@ inner_join(
     suffix = c("_spec", "_sens")
 )
 ```
+
 ```{r ROC KLK3 estratificación de riesgo}
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
@@ -1462,7 +1457,7 @@ Entre los datos podemos encontrar algunos de los marcadores utilizados en estos 
 
 Por otra parte algo similar sucede con los predictores `ENSG00000205364` (MTM1) y `ENSG00000187193` (MT1X), los predictores con mayor $FpAUC$, genes que se encuentran relacionados con [actividad supresora de tumores](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4080639/) y con [estados avanzados de la enfermedad](https://pubmed.ncbi.nlm.nih.gov/10754528/).
 
-# 7. Discusión y conclusiones
+# Discusión y conclusiones
 
 El desarrollo de nuevas tecnologías permite el análisis de un gran número de marcadores simultáneamente, donde análisis basados en $AUC$ son utilizados habitualmente. En el ámbito clínico regiones concretas de la curva son más relevantes para tratar con los costes de diagnósticos erróneos. Así, las métricas que evaluan estas regiones, como el $pAUC$, están ganando mayor interés. A pesar de ello esta métrica presenta limitaciones para su uso debido a su interpretabilidad, por lo que transformaciones alternativas para trabajar en regiones concretas de la curva resultan de mayor utilidad.
 

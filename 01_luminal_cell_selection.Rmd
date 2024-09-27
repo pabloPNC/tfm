@@ -1,13 +1,6 @@
----
-title: "Luminal Cell selection"
-author: "Pablo Navarro Carpio"
-date: "23/07/2024"
-output: html_document
----
+# Importar librerias y datos
 
-# 1. Importar librerias y datos
-
-```{r Librerias}
+```{r Librerias, warning=FALSE}
 library(Seurat)
 library(dplyr)
 library(purrr)
@@ -36,9 +29,9 @@ GSM4773522_PCa1_counts_matrix <- import_gene_counts(
 )
 ```
 
-# 2. Preprocesamiento y CQ
+# Preprocesamiento y CQ
 
-## 2.1. Creación del objeto Seurat
+## Creación del objeto Seurat
 
 Para realizar el análisis utilizaremos el paquete `Seurat`, el cual proveerá de las herramientas necesarias para llevar a cabo la selección de marcadores así como selección de células de interés.
 
@@ -100,26 +93,26 @@ seurat_objects <- subset(
 )
 ```
 
-## 2.2. Normalización
+## Normalización
 
 Hasta ahora hemos trabajado con los datos en crudo, sin embargo, a partir de ahora es conveniente trabajar con datos normalizados. La normalización nos permite asegurar que la heterogeneidad en nuestro conjunto de datos, se deba solamente a differencias biologicas y no a otras, como por ejemplo sesgos técnicos.
 
 Por ello, utilizaremos la función la función `Seurat::NormalizeData` con el argumento `normalization.method = "LogNormalize"`. La función aplicará un escalado global: para cada célula, dividirá el número de cuentas de cada gen entre el número total de cuentas. Finalmente aplicará una trasformación logarítmica a los resultados.
 
-```{r Normalización}
+```{r Normalización, cache=TRUE}
 seurat_objects <- NormalizeData(
     seurat_objects,
     normalization.method = "LogNormalize"
 )
 ```
 
-# 3. Búsqueda de genes de alta variabilidad
+# Búsqueda de genes de alta variabilidad
 
 A continuación se buscarán los genes que presenten una mayor variabilidad, es decir que estén muy expresados en algunas células y poco en otras. La búsqueda de estos genes, y su uso en el análisis aguas abajo, facilita (la identificación de patrones de interés)[https://www.nature.com/articles/nmeth.2645], por ello los usaremos en los siguientes pasos.
 
 Para seleccionar estos genes utilizaremos la funcion `Seurat::FindVariableFeatures`. La función requiere, además del objeto seurat, que indiquemos un número de variables a seleccionar (`nfeatures`), por lo que para nuestro caso seleccionaremos arbitrariamente $2000$.
 
-```{r Búsqueda de variables}
+```{r Búsqueda de variables, cache=TRUE}
 seurat_objects <- FindVariableFeatures(
     seurat_objects,
     selection.method = "vst",
@@ -139,7 +132,7 @@ LabelPoints(
 )
 ```
 
-# 4. Escalado de los datos
+# Escalado de los datos
 
 Antes de aplicar técnicas de reducción de la dimensionalidad, es conveniente aplicar un escalado y centrado de los datos. Esto es necesario puesto que este tipo de técnicas son sensibles a conjuntos de datos que tienen escalas muy dispares. De esta forma un gen que habitualmente esté muy expresado no tendrá más peso en el análisis posterior.
 
@@ -152,22 +145,22 @@ seurat_objects <- ScaleData(
 )
 ```
 
-# 5. Reducción de la dimensionalidad
+# Reducción de la dimensionalidad
 
 Como el conjunto de datos tiene un alto número de variables, es conveniente aplicar técnicas de reducción de la dimensionalidad para trabajar con ellos. Por esta razón realizaremos un análisis de componentes principales (PCA) sobre los datos escalados, usando los genes de mayor variabilidad.
 
 Para ello utilizaremos la función `Seurat::RunPCA` indicando los genes de mayor variabilidad.
 
-```{r PCA}
+```{r PCA, cache=TRUE}
 seurat_objects <- RunPCA(
     seurat_objects,
     features = VariableFeatures(seurat_objects)
 )
 ```
 
-# 6. Integración de datos
+# Integración de datos
 
-## 6.1. Objetivos de la integración
+## Objetivos de la integración
 
 La integracion de datos en scRNA-seq permite emparejar tipos celulares de distintos conjuntos de datos. Esto permite mejorar el poder estadístico e incluso hacer comparativas entre distintos conjuntos datos.
 
@@ -176,7 +169,7 @@ Aunque en nuestro caso nos centraremos en el primero, algunos de los objetivos q
     + Comparar marcadores especificos de tipos celulares conservados en células control y tratadas
     + Comparar conjuntos de datos para encontrar respuesta a un tratamiento
 
-## 6.2. Integración
+## Integración
 
 Existen diversos métodos que podemos utilizar para integrar nuestros datos, pero en nuestro caso utilizaremos el análisis de correlación canónica (CCA).
 
@@ -184,7 +177,7 @@ A la hora de aplicar este método, Seurat trabaja sobre un espacio de baja dimen
 
 Para realizar la integración utilizaremos la función `Seurat::IntegrateLayers`, indicando el nombre de la nueva reducción (`new.reduction`), la reducción a corregir (`orig.reduction`) y el método a utilizar (`method = CCAIntegration`)
 
-```{r Integración}
+```{r Integración, cache=TRUE}
 seurat_objects <- IntegrateLayers(
     seurat_objects,
     method = CCAIntegration,
@@ -201,7 +194,7 @@ seurat_objects <- JoinLayers(
 )
 ```
 
-## 6.3. Dimensionalidad del conjunto de datos
+## Dimensionalidad del conjunto de datos
 
 Los conjuntos de datos de scRNA-seq presentan mucho ruido, es por ello entre otros motivos por los que se trabaja tratando de reducir la dimensionalidad.
 
@@ -226,11 +219,11 @@ DimHeatmap(
 
 Después de observar los gráficos podemos ver que la variación por componente empieza a disminuir a partir de la componente número 10. Aún así, escoger menos componentes de lo ideal puede tener efectos adversos en los resultados finales. Por esta razón, escogeremos hasta la componente 20, donde se observa que el descenso de la variación es más pronunciado.
 
-# 7. Agrupamiento de células
+# Agrupamiento de células
 
 Una vez hemos seleccionado las dimensiones que vamos a utilizar, el siguiente paso consistirá en agrupar las células del experimento. El primer paso será construir un grafo con los K vecinos más cercanos (KNN) utilizando las dimensiones que hemos seleccionado previamente. Para este primer paso, utilizaremos la función `Seurat::FindNeighbors`.
 
-```{r K vecinos más cercanos}
+```{r K vecinos más cercanos, cache=TRUE}
 seurat_objects <- FindNeighbors(
     seurat_objects,
     dim = 1:20,
@@ -240,16 +233,16 @@ seurat_objects <- FindNeighbors(
 
 El segundo paso, será una optimización del paso anterior para finalmente agrupar las células en distintos clusters. Para automatizar este paso, Seurat provee de la función `Seurat::FindClusters`. La función permite utilizar el parámetro de `resolution` para controlar la granularidad del agrupamiento. Para nuestro rango de células utilizar valores entre 0.4 y 1.2 suele devolver buenos resultados. De forma arbitraria, en nuestro caso utilizaremos una resolución de 0.8.
 
-```{r Búsqueda de cluster}
+```{r Búsqueda de cluster, cache=TRUE}
 seurat_objects <- FindClusters(
     seurat_objects,
     resolution = 0.8
 )
 ```
 
-# 8. Reducción de la dimensionalidad no lineal (UMAP)
+# Reducción de la dimensionalidad no lineal (UMAP)
 
-## 8.1. Utilidad del UMAP
+## Utilidad del UMAP
 
 Las técnicas de reducción de dimensionalidad no lienales pueden mostrar relaciones en los datos subyacentes. De esta forma las células que sean similares deberían estar agrupadas.
 
@@ -257,11 +250,11 @@ Para este caso utilizaremos la técnica de UMAP para visualizar las células. Si
 
 En otras palabras, las células que sean muy similares deberían aparecer próximas, sin embargo no será posible hacer conclusiones puesto que relaciones de mayor escala se estarán perdiendo.
 
-## 8.2. UMAP
+## UMAP
 
 Podemos aplicar un UMAP con la función `Seurat::RunUMAP` indicando las dimensiones que utilizaremos (`dims`) y la redución de la dimensionalidad que queremos que utilice (`reduction`) 
 
-```{r UMAP}
+```{r UMAP, cache=TRUE}
 seurat_objects <- RunUMAP(
     seurat_objects,
     dims = 1:20,
@@ -269,7 +262,7 @@ seurat_objects <- RunUMAP(
 )
 ```
 
-## 8.3. Visualización del UMAP
+## Visualización del UMAP
 
 Para visualizar una dimensión generada podemos utilizar la función `Seurat::DimPlot`, en la cual solo se ha de indicar la reducción que se quiere mostrar (`reduction`), en este caso el UMAP.
 
@@ -281,13 +274,13 @@ DimPlot(
 )
 ```
 
-# 9. Búsqueda de genes expresados diferencialmente (DEG)
+# Búsqueda de genes expresados diferencialmente (DEG)
 
 Finalmente una vez se han identificado los grupos de células, podemos buscar que genes están expresados diferencialmente en cada uno de ellos.
 
 Seurat ofrece la función `Seurat::FindAllMarkers` que busca los genes muy o poco expresados en cada cluster con respecto al resto de células.
 
-```{r DEG en clusters}
+```{r DEG en clusters, cache=TRUE}
 all_markers <- FindAllMarkers(
     seurat_objects
 )
@@ -300,9 +293,9 @@ La función devuelve una tabla con las siguientes columnas:
 +  **pct.2**. El porcentaje de células que expresan el gen, que no pertenecen al cluster.
 +  **p_val_adj**. El valor p ajustado por la corrección de Bonferroni usando todos los genes del conjunto de datos.
 
-# 10. Selección de células
+# Selección de células
 
-## 10.1. Filtrado de resultados significativos
+## Filtrado de resultados significativos
 
 Una vez hemos obtenido los genes expresados diferencialmente y los clusters a los que pertenecen, podemos analizar los resultados. El primer paso es el más evidente, y es filtrar los resultados no significativos. 
 
@@ -315,7 +308,7 @@ filtered_markers <- all_markers %>%
 
 Una vez seleccionados los más significativos, se pueden examinar los resultados.
 
-## 10.2. Identificación de clusters
+## Identificación de clusters
 
 Realizado el agrupamiento de células así como la identificación de los marcadores diferencialemente expresados, podemos tratar de identificar los tipos celulares que se corresponden con los distintos clusters.
 
