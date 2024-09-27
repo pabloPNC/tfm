@@ -1,0 +1,9 @@
+---
+title: "Test title"
+author: "Me"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+output: bookdown::gitbook
+documentclass: book
+description: "Description text"
+---
