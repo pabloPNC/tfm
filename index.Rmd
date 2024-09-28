@@ -1,9 +1,7 @@
 ---
-title: "Test title"
-author: "Me"
-date: "`r Sys.Date()`"
+title: "Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico"
+author: "Pablo Navarro"
 site: bookdown::bookdown_site
 output: bookdown::gitbook
 documentclass: book
-description: "Description text"
 ---
