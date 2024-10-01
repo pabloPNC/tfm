@@ -1,0 +1,13 @@
+rmd_files: [
+    "index.Rmd",
+    "00_introduction.Rmd",
+    "01_luminal_cell_selection.Rmd",
+    "02_marker_selection.Rmd",
+    "03_TCGA_processing.Rmd",
+    "04_Common_markers_selection.Rmd",
+    "05_AUC_indexes.Rmd",
+    "06_Appendix.Rmd",
+    "07_References.Rmd"
+]
+# K-M strat, allow duplicated labels
+new_session: yes

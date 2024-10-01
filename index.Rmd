@@ -2,6 +2,9 @@
 title: "Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico"
 author: "Pablo Navarro"
 site: bookdown::bookdown_site
-output: bookdown::gitbook
+bibliography: ["packages.bib", "references.bib"]
+link-citations: true
 documentclass: book
+output: 
+    bookdown::gitbook: default
 ---
