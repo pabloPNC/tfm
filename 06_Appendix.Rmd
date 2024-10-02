@@ -1,0 +1,27 @@
+# (APPENDIX) Apéndice {-}
+
+# Información de la sesión {#session-info}
+
+La sesión información de la sesión de R utilizada durante la realización del trabajo se muestra a continuación:
+
+```{r Información de la sesión}
+xfun::session_info(
+    packages = c(
+        "Seurat",
+        "dplyr",
+        "purrr",
+        "data.table",
+        "stringr",
+        "tibble",
+        "readr",
+        "tidyr",
+        "forcats",
+        "biomaRt",
+        "pROC",
+        "ROCpAI",
+        "ROCnGO"
+    ),
+    dependencies = FALSE
+)
+```
+
