@@ -11,3 +11,11 @@ rmd_files: [
 ]
 # K-M strat, allow duplicated labels
 new_session: yes
+# Change figure and table labels
+language:
+    label:
+        fig: 'Figura '
+        tab: 'Tabla '
+    ui:
+        chapter_name: ''
+        appendix_name: ''

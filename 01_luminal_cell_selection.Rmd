@@ -227,7 +227,7 @@ DimHeatmap(
 
 Tras observar la figura \@ref(fig:elbow-plot) y \@ref(fig:heatmaps), se puede observar que la variación empieza a disminuir a partir de la componente número 10, sin embargo, se debe tener en cuenta que escoger menos componentes de lo ideal puede resultar en perdidas de información y propagación a los resultados finales. Por este motivo y de forma arbitraria se seleccionará hasta la componente 20, donde el descenso de la variación explicada es más pronunicado, o en otras palabras, se está capturando la mayor parte de la variabilidad de los datos.
 
-## Agrupamiento de células
+## Agrupamiento de células {#clustering}
 
 Seleccionadas las dimensiones, el siguiente paso consistirá en agrupar las células del experimento. En primer lugar se construirá un grafo con los K vecinos más cercanos (KNN) utilizando las dimensiones seleccionadas previamente. Para ello, se usará la función `Seurat::FindNeighbors`.
 
