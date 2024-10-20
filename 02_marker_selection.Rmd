@@ -229,7 +229,7 @@ Aunque la búsqueda de clusters se haya realizado una separación, ambos cluster
 
 La formación de clusters no deja de ser un proceso matemático que se aplica al conjunto células. En este caso esta técnica se ha aplicado a fin de "aumentar la resolución" y así tratar de encontrar poblaciones de células más pequeñas. Matemáticamente estos resultados pueden ser coherentes, pero no hay una garantía de que tengan un significado biológico. Un error común con este tipo de procedimiento es aumentar demasiado la resolución, obteniendo así muchos cluster poco poblados, donde aunque células presenten similitudes relevantes puedan acabar en grupos distintos. De esta forma, la interpretabilidad de los resultados juega un papel crucial para no influir negativamente en los análiss posteriores.
 
-Aplicado a este caso, el cluster 8 ya contaba con un número bajo de células, pero con las cuales sí que se ha podido contrastar que se trataban de células luminales de prostata con cierto grado de malignidad. Al volver a aplicar las técnicas de clustering y no poder validar las subpoblaciones obtenidad, se seguirá trabajando con el cluster 8 en su totalidad.
+Aplicado a este caso, el cluster 8 ya contaba con un número bajo de células, pero con las cuales sí que se ha podido contrastar que se trataban de células luminales de prostata con cierto grado de malignidad. Al volver a aplicar las técnicas de clustering y no poder validar las subpoblaciones obtenidas, se seguirá trabajando con el cluster 8 en su totalidad.
 
 ## Selección de marcadores
 
