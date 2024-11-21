@@ -1,0 +1,17 @@
+# R project files
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
+
+# RAW data, build and other files
+GSE157703_RAW.tar
+GSE157703_RAW/
+_book/
+_bookdown_files/
+file_clinical_sheet.csv
+rds_objects/
+tcga_data/
+temp/
