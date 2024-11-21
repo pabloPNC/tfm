@@ -1,6 +1,6 @@
 # Filtrado de la matriz de cuentas {#count-matrix-filtering}
 
-En esta parte del trabajo se realizará un filtrado de la matriz generada en la sección anterior (sección \@ref(count-matrix-generation)). Para este paso, se utilizarán los marcadores seleccionados de  experimentos de scRNA-seq (sección \@ref(cancer-cells-selection)), reduciendo así el tamaño y ruido presente en los datos lo cual facilitará los análisis posteriores.
+En esta parte del trabajo se realizará un filtrado de la matriz generada en la sección anterior (sección \@ref(count-matrix-generation)). Para este paso, se utilizarán los marcadores seleccionados de experimentos de scRNA-seq (sección \@ref(cancer-cells-selection)), reduciendo así el tamaño y ruido presente en los datos lo que facilitará los análisis posteriores.
 
 ```{r Importar librerías, include=FALSE, warning=FALSE}
 library(biomaRt)
@@ -16,9 +16,9 @@ tcga_data <- readRDS("./rds_objects/03_tcga_data.rds")
 
 ## Equivalencias entre identificadores
 
-Los formas para identificar los marcadores en los experimentos de scRNA-seq y los provenientes de TCGA son distintas. Los primeros utilizan utilizan el acrónimo del gen, mientras que los segundos utilizan identificadores de [Ensembl](https://www.ensembl.org/index.html). 
+Los formas para identificar los marcadores en los experimentos de scRNA-seq y los provenientes de TCGA son distintas. Los primeros utilizan el acrónimo del gen, mientras que los segundos utilizan identificadores de [Ensembl](https://www.ensembl.org/index.html). 
 
-Para realizar el filtrado se deberán encontrar equivalencias entre el acrónimo e identificador de Ensembl. Esta tarea es posible realizarla utilizando el paquete `biomaRt`[@R-biomaRt], el cual permite acceder a diversos portales de información entre los que se encuentra Ensembl. En primer lugar se usará la función `biomaRt::useEnsembl` para seleccionar la base de datos a la que acceder, en este caso `genes`, y el conjunto de datos a utilizar, en este caso `hsapiens_gene_ensembl`, es decir genes en humanos.
+Para realizar el filtrado se deberán encontrar equivalencias entre los acrónimos e identificadores de Ensembl. Esta tarea es posible utilizando el paquete `biomaRt`[@R-biomaRt], el cual permite acceder a diversos portales de información entre los que se encuentra Ensembl. En primer lugar, se usará la función `biomaRt::useEnsembl` para seleccionar la base de datos a la que acceder, en este caso `genes`, y el conjunto de datos a utilizar, en este caso `hsapiens_gene_ensembl`, es decir genes de humanos.
 
 ```{r Búsqueda de equivalencias para los identificadores, cache=TRUE}
 ensembl <- useEnsembl(
@@ -27,9 +27,9 @@ ensembl <- useEnsembl(
 )
 ```
 
-La función preparará la configuración necesaria para conectar con Ensembl y realizar consultas a su base de datos, para esto último se usará la función `biomaRt::getBM`. La función permite especificar una serie de atributos para la consulta, en este caso, se requerirá el nombre del gen (`hgnc-symbol`), su identificador de Ensembl (`ensembl_gene_id`) y los posibles nombres alternativos para dicho gen (`external_synonym`).
+La función preparará la configuración necesaria para conectar con Ensembl y realizar consultas a su base de datos, para esto último se usará la función `biomaRt::getBM`. `getBM` permite especificar una serie de atributos para la consulta, en este caso, se requerirá el nombre del gen (`hgnc_symbol`), su identificador de Ensembl (`ensembl_gene_id`) y posibles nombres alternativos para dicho gen (`external_synonym`).
 
-En la configuración de la función también se ha especificado el parámetro `mart`, que simplemente requiere el objeto con la configuración antes generada. Además de estos parámetros, la función también permite especificar filtros para recibir resultados más concretos. Habitulamente serían de utilidad, pero dado que para este caso requeriremos de una lógica más compleja aplicaremos filtrados propios en pasos posteriores. 
+En la configuración de la función también se ha especificado el parámetro `mart`, que simplemente requiere el objeto con la configuración antes generada. Además de estos parámetros, la función también permite especificar filtros para recibir resultados más concretos. Habitualmente serían de utilidad, pero dado que para este caso se requerirá una lógica más compleja, por ello, en su lugar, se aplicarán filtrados propios en pasos posteriores. 
 
 ```{r Ejecutando la consulta, cache=TRUE}
 query_results <- getBM(
@@ -47,7 +47,7 @@ knitr::kable(
 )
 ```
 
-Obtenidos los resultados de la consulta, antes de comenzar a trabajar con ellos, se compactará la columna de los nombres de los genes y de los sinónimos en una sola. De esta forma será posible acceder a cualquier nombre y/o equivalente de forma más sencilla.
+Obtenidos los resultados de la consulta, antes de comenzar a trabajar con ellos, se compactará la columna de los nombres y sinónimos en una sola. De esta forma, será posible acceder a cualquier nombre y/o equivalente de forma más sencilla.
 
 ```{r Tabla de equivalencias}
 id_equivalences <- query_results %>%
@@ -63,7 +63,7 @@ kableExtra::kbl(
 ) %>% kableExtra::kable_styling()
 ```
 
-Una vez se ha generado la tabla de equivalencias, es conveniente comprobar que los marcadores seleccionados se encuentran en ella. De esta de forma se asgeura que sea posible asignarles un identificador. Relizando la intersección (`dplyr::intersect`) y la diferencia (`dplyir::setdiff`) entre los marcadores seleccionados y genes en la tabla de equivalencias, es posible identificar los genes que se han encontrado en la base de datos y los faltantes.
+Generada la tabla de equivalencias, es conveniente comprobar que los marcadores seleccionados se encuentran en ella. De esta de forma, se asegura que sea posible asignarles un identificador. Realizando la intersección (`dplyr::intersect`) y la diferencia (`dplyir::setdiff`) entre los marcadores seleccionados y genes en la tabla de equivalencias, es posible identificar los genes que se han encontrado en la base de datos y los faltantes.
 
 ```{r Genes encontrados y no encontrados}
 missing_genes <- setdiff(markers_cluster_8$gene, id_equivalences$acronym)
@@ -84,15 +84,15 @@ DT::datatable(
 )
 ```
 
-Una exploración de los genes faltantes en la base de datos revela una posbile explicación para esta ausencia. Tomando como ejemplo el caso de **RP11-356O9.1**, una búsqueda en ensamblados anteriores ([GRCh37.p13](https://grch37.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=ENSG00000258414;r=14:38033252-38048330;t=ENST00000554829)), permiten identificarlo por su nombre, sin embargo en casos posteriores ([GRCh38.p14](https://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000258414)) no existe nombre alguno para dicho gen.
+Una exploración de los genes faltantes en la base de datos revela una posible explicación para esta ausencia. Tomando como ejemplo el caso de **RP11-356O9.1**, una búsqueda en ensamblados anteriores ([GRCh37.p13](https://grch37.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=ENSG00000258414;r=14:38033252-38048330;t=ENST00000554829)) permiten identificarlo por su nombre, sin embargo en casos posteriores ([GRCh38.p14](https://www.ensembl.org/Homo_sapiens/Gene/Idhistory?g=ENSG00000258414)) no existe nombre alguno para dicho gen.
 
-Como sucede con este gen, puede darse el caso de correcciones de errores, es decir genes que incialmente fueron identificados como distintos se combinan en una sola entrada cuando se descubre que puede tratarse del mismo. Alternativamente el símbolo otorgado a estos genes se corresponde al establecido por [HUGO Gene Nomenclature Commitee](https://www.genenames.org/), por ello en caso que un gen haya recibido todavía un símbolo, este no estará disponible en la base de datos.
+Como sucede con este gen, puede darse el caso de correcciones de errores, es decir genes que inicialmente fueron identificados como distintos se combinan en una sola entrada cuando se descubre que puede tratarse del mismo. Alternativamente, el símbolo otorgado a estos genes se corresponde al establecido por [HUGO Gene Nomenclature Commitee](https://www.genenames.org/), por ello, en caso que un gen no haya recibido todavía un símbolo, este no estará disponible en la base de datos.
 
-Por estos casos, para incluir correcciones más recientes se usará el ensamblado más reciente (GRCh38.14). Además en filtrados posteriores, los genes que presenten cierta arbitrariedad no serán considerados a fin de evitar posibles errores.
+Por estos casos, para incluir correcciones más recientes se usará el ensamblado más reciente (GRCh38.14). Además, en filtrados posteriores, los genes que presenten cierta arbitrariedad no serán considerados a fin de evitar posibles errores.
 
 ## Filtrado por los genes identificados
 
-Seleccionados los genes con identificadores, a continuación se obtendrá este subconjunto de genes también en los datos de interés. Además, para facilitar posteriores accesos, se añadirán los identificadores de Ensembl al conjunto de datos en una nueva variable (`ensembl_gene_id`).
+Seleccionados los genes con identificadores, se obtendrán aquellos que pertenezcan a los datos de interés. Además, para facilitar posteriores accesos, se añadirán los identificadores de Ensembl al conjunto de datos en una nueva variable (`ensembl_gene_id`).
 
 ```{r Genes filtrados}
 finded_markers <- markers_cluster_8 %>%
@@ -122,7 +122,7 @@ kableExtra::kbl(
 ) %>% kableExtra::kable_paper()
 ```
 
-Comprobando las distintas entradas es posible observar que algunos genes presentan el mismo identificador de Ensembl. Estas duplicaciones han sido generadas debido a uno de los siguientes casos, durante la creación de la columna `ensembl_gene_id`:
+Comprobando las distintas entradas es posible observar como algunos genes presentan el mismo identificador de Ensembl. Estas duplicaciones han sido generadas durante la creación de la columna `ensembl_gene_id`, debido a uno de los siguientes casos:
 
 + El sinónimo (`external_sinonym`) y nombre del gen (`hgnc_symbol`) son iguales, introduciendo información duplicada (e.g. **PEX11G**).
 + El sinónimo y nombre del gen son distintos, introduciendo dos entradas (e.g. **APPL2** y **APLP2**).
@@ -145,12 +145,12 @@ filtered_markers <- finded_markers %>%
     )
 ```
 
-Una exploración más detallada de los datos muestra el caso opuesto, genes con el mismo nombre presentando 2 identificadores de ensemble distintos, e.g. **PRR4** con los identificadores: `ENSG00000111215`, `ENSG00000263247` y `ENSG00000282269`. Esta duplicidad es conveniente puesto que es posible asegurar a que identificador se hace referencia en los experimentos. Además, esta duplicidad no afecta negativamente, puesto que aunque posean identificadores distintos los valores de expresión para estos genes serán identicos.
+Una exploración más detallada de los datos muestra el caso opuesto, genes con el mismo nombre presentando 2 identificadores de ensemble distintos, e.g. **PRR4** con los identificadores: `ENSG00000111215`, `ENSG00000263247` y `ENSG00000282269`. Esta duplicidad es conveniente, puesto que es posible asegurar a que identificador se hace referencia en los experimentos. Además, no afecta negativamente, puesto que aunque posean identificadores distintos los valores de expresión para estos genes serán idénticos.
 
-Filtrados los marcadores finalmente se podrán seleccionar los genes del conjunto de datos extraido de TCGA. Para ello, en primer lugar, se renombrarán las columnas eliminando la versión de los identificadores de ellas y eliminarán los genes conteniendo "PAR_Y" en su identificador, puesto que no están expresados y pueden generar conflictos de identificadores duplicados. En segundo lugar, se seleccionarán las columnas (genes) que coincidan con los identificadores selecciandos.
+Filtrados los marcadores, se podrán seleccionar los genes del conjunto de datos extraído de TCGA. Para ello, en primer lugar, se renombrarán las columnas eliminando la versión de los identificadores de ellas y los genes conteniendo "PAR_Y" en su identificador, puesto que no están expresados y pueden generar conflictos de identificadores duplicados. En segundo lugar, se seleccionarán las columnas (genes) que coincidan con los identificadores seleccionados.
 
 ```{r TCGA subsetting}
-filtered_tcga_data <- tcga_data %>%
+roc_data <- tcga_data %>%
     select(
         -contains("PAR")
     ) %>%
@@ -163,26 +163,25 @@ filtered_tcga_data <- tcga_data %>%
     )
 ```
 
-De esta forma, el conjunto de datos resultante contiene 2652 variables (exceptuando variables respuesta e identificadores de muestra). Como se ha explicado previamente, es posible que existan genes con identificadores distintos, sin embargo es posible realizar un conteo del número de genes únicos que en realidad se han seleccionado.
+De esta forma, el conjunto de datos resultante contiene 2651 variables (exceptuando variables respuesta e identificadores de muestra). Como se ha explicado previamente, es posible que existan genes con identificadores distintos, sin embargo, se puede realizar un conteo del número de genes únicos que en realidad se han seleccionado.
 
 ```{r test}
 genes_in_tcga <- filtered_markers$ensembl_gene_id %in%
-    colnames(filtered_tcga_data)
+    colnames(roc_data)
 markers_in_tcga <- filtered_markers[which(genes_in_tcga), ]
 length(unique(markers_in_tcga$gene))
 ```
 
-En pasos anteriores, cuando se seleccionaron los marcadores comunes entre los obtenidos en las muestras y los disponibles en Ensembl, se encontraron 2586; y de estos, 2585 se han encontrado en las muestras del TCGA. Con estos genes disponibles, serán con los que se trabaje a la hora de realizar los análisis posteriores.
+En pasos anteriores, cuando se seleccionaron los marcadores comunes entre los obtenidos en las muestras y los disponibles en Ensembl, se encontraron 2585; y de estos, 2584 se han encontrado en las muestras del TCGA. Con estos genes, será con los que se trabaje a la hora de realizar los análisis posteriores.
 
 ```{r Serialización, include=FALSE}
-
 saveRDS(
     object = markers_in_tcga,
     file = "./rds_objects/04_common_markers.rds"
 )
 
 saveRDS(
-    object = filtered_tcga_data,
+    object = roc_data,
     file = "./rds_objects/04_filtered_tcga_data.rds"
 )
 ```
