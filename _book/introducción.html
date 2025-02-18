@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico</title>
+  <meta name="description" content="Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  <meta name="generator" content="bookdown 0.40 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  
+  
+  
+
+<meta name="author" content="Pablo Navarro" />
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="luminal-cells-selection.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<link href="libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet" />
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="libs/datatables-binding-0.33/datatables.js"></script>
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="libs/dt-core-1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="libs/crosstalk-1.2.1/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.2.1/js/crosstalk.min.js"></script>
+<script src="libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+<link href="libs/nouislider-7.0.10/jquery.nouislider.min.css" rel="stylesheet" />
+<script src="libs/nouislider-7.0.10/jquery.nouislider.min.js"></script>
+<link href="libs/selectize-0.12.0/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="libs/selectize-0.12.0/selectize.min.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html"><i class="fa fa-check"></i>Introducción</a>
+<ul>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#conjuntos-de-datos"><i class="fa fa-check"></i>Conjuntos de datos</a></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#software-utilizado"><i class="fa fa-check"></i>Software utilizado</a>
+<ul>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#librerías-externas"><i class="fa fa-check"></i>Librerías externas</a></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#librerías-propias"><i class="fa fa-check"></i>Librerías propias</a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#estructura"><i class="fa fa-check"></i>Estructura</a></li>
+</ul></li>
+<li class="part"><span><b>I Búsqueda de marcadores</b></span></li>
+<li class="chapter" data-level="1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html"><i class="fa fa-check"></i><b>1</b> Selección de células luminales de prostata</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#importar-matrices-de-cuentas"><i class="fa fa-check"></i><b>1.1</b> Importar matrices de cuentas</a></li>
+<li class="chapter" data-level="1.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#preprocesamiento-y-cq"><i class="fa fa-check"></i><b>1.2</b> Preprocesamiento y CQ</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#creación-del-objeto-seurat"><i class="fa fa-check"></i><b>1.2.1</b> Creación del objeto Seurat</a></li>
+<li class="chapter" data-level="1.2.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#lecturas-mapeadas-al-genoma-mitocondrial"><i class="fa fa-check"></i><b>1.2.2</b> Lecturas mapeadas al genoma mitocondrial</a></li>
+<li class="chapter" data-level="1.2.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#normalización"><i class="fa fa-check"></i><b>1.2.3</b> Normalización</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#búsqueda-de-genes-de-alta-variabilidad"><i class="fa fa-check"></i><b>1.3</b> Búsqueda de genes de alta variabilidad</a></li>
+<li class="chapter" data-level="1.4" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#escalado-de-los-datos"><i class="fa fa-check"></i><b>1.4</b> Escalado de los datos</a></li>
+<li class="chapter" data-level="1.5" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#dim-reduction"><i class="fa fa-check"></i><b>1.5</b> Reducción de la dimensionalidad</a></li>
+<li class="chapter" data-level="1.6" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#integración-de-datos"><i class="fa fa-check"></i><b>1.6</b> Integración de datos</a>
+<ul>
+<li class="chapter" data-level="1.6.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#objetivos-de-la-integración"><i class="fa fa-check"></i><b>1.6.1</b> Objetivos de la integración</a></li>
+<li class="chapter" data-level="1.6.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#integración"><i class="fa fa-check"></i><b>1.6.2</b> Integración</a></li>
+</ul></li>
+<li class="chapter" data-level="1.7" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#dimensionalidad-del-conjunto-de-datos"><i class="fa fa-check"></i><b>1.7</b> Dimensionalidad del conjunto de datos</a></li>
+<li class="chapter" data-level="1.8" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#clustering"><i class="fa fa-check"></i><b>1.8</b> Agrupamiento de células</a></li>
+<li class="chapter" data-level="1.9" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#reducción-de-la-dimensionalidad-no-lineal-umap"><i class="fa fa-check"></i><b>1.9</b> Reducción de la dimensionalidad no lineal (UMAP)</a>
+<ul>
+<li class="chapter" data-level="1.9.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#utilidad-del-umap"><i class="fa fa-check"></i><b>1.9.1</b> Utilidad del UMAP</a></li>
+<li class="chapter" data-level="1.9.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#umap"><i class="fa fa-check"></i><b>1.9.2</b> UMAP</a></li>
+<li class="chapter" data-level="1.9.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#visualización-del-umap"><i class="fa fa-check"></i><b>1.9.3</b> Visualización del UMAP</a></li>
+</ul></li>
+<li class="chapter" data-level="1.10" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#degs-search"><i class="fa fa-check"></i><b>1.10</b> Búsqueda de genes expresados diferencialmente (DEG)</a></li>
+<li class="chapter" data-level="1.11" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#selección-de-células"><i class="fa fa-check"></i><b>1.11</b> Selección de células</a>
+<ul>
+<li class="chapter" data-level="1.11.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#filtrado-de-resultados-significativos"><i class="fa fa-check"></i><b>1.11.1</b> Filtrado de resultados significativos</a></li>
+<li class="chapter" data-level="1.11.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#identificación-de-clusters"><i class="fa fa-check"></i><b>1.11.2</b> Identificación de clusters</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html"><i class="fa fa-check"></i><b>2</b> Selección de células cancerosas y marcadores</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#deg-luminal-cells"><i class="fa fa-check"></i><b>2.1</b> DEG en células luminales</a>
+<ul>
+<li class="chapter" data-level="2.1.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#caracterización-y-selección-de-los-clusters"><i class="fa fa-check"></i><b>2.1.1</b> Caracterización y selección de los clusters</a></li>
+</ul></li>
+<li class="chapter" data-level="2.2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#búsqueda-de-subpoblaciones"><i class="fa fa-check"></i><b>2.2</b> Búsqueda de subpoblaciones</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#repetición-del-flujo-de-trabajo"><i class="fa fa-check"></i><b>2.2.1</b> Repetición del flujo de trabajo</a></li>
+<li class="chapter" data-level="2.2.2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#interpretación-de-resultados"><i class="fa fa-check"></i><b>2.2.2</b> Interpretación de resultados</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#selección-de-marcadores"><i class="fa fa-check"></i><b>2.3</b> Selección de marcadores</a></li>
+</ul></li>
+<li class="part"><span><b>II Generación del conjunto de datos</b></span></li>
+<li class="chapter" data-level="3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html"><i class="fa fa-check"></i><b>3</b> Generación de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#descripción-de-los-datos"><i class="fa fa-check"></i><b>3.1</b> Descripción de los datos</a>
+<ul>
+<li class="chapter" data-level="3.1.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#clinical-preprocessing"><i class="fa fa-check"></i><b>3.1.1</b> Preprocesamiento del fichero clinical y gdc_sample_sheet</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#creación-de-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.2</b> Creación de matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.2.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#import-read-files"><i class="fa fa-check"></i><b>3.2.1</b> Importar archivos de lecturas</a></li>
+<li class="chapter" data-level="3.2.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#process-read-files"><i class="fa fa-check"></i><b>3.2.2</b> Selección de variables y renombrado</a></li>
+<li class="chapter" data-level="3.2.3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#unión-de-archivos"><i class="fa fa-check"></i><b>3.2.3</b> Unión de archivos</a></li>
+<li class="chapter" data-level="3.2.4" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#construcción-de-la-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.2.4</b> Construcción de la matriz de cuentas</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#procesado-de-la-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.3</b> Procesado de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.3.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#pivotado-de-la-matriz"><i class="fa fa-check"></i><b>3.3.1</b> Pivotado de la matriz</a></li>
+<li class="chapter" data-level="3.3.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#cálculo-de-gold-standards"><i class="fa fa-check"></i><b>3.3.2</b> Cálculo de Gold Standards</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html"><i class="fa fa-check"></i><b>4</b> Filtrado de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html#equivalencias-entre-identificadores"><i class="fa fa-check"></i><b>4.1</b> Equivalencias entre identificadores</a></li>
+<li class="chapter" data-level="4.2" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html#filtrado-por-los-genes-identificados"><i class="fa fa-check"></i><b>4.2</b> Filtrado por los genes identificados</a></li>
+</ul></li>
+<li class="part"><span><b>III Evaluación de índices</b></span></li>
+<li class="chapter" data-level="5" data-path="index-evaluation.html"><a href="index-evaluation.html"><i class="fa fa-check"></i><b>5</b> Evaluación de índices</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="index-evaluation.html"><a href="index-evaluation.html#aucs"><i class="fa fa-check"></i><b>5.1</b> AUCs</a>
+<ul>
+<li class="chapter" data-level="5.1.1" data-path="index-evaluation.html"><a href="index-evaluation.html#introducción-1"><i class="fa fa-check"></i><b>5.1.1</b> Introducción</a></li>
+<li class="chapter" data-level="5.1.2" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-aucs-para-diagnóstico"><i class="fa fa-check"></i><b>5.1.2</b> Cálculo de AUCs para diagnóstico</a></li>
+<li class="chapter" data-level="5.1.3" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-aucs-para-pronóstico"><i class="fa fa-check"></i><b>5.1.3</b> Cálculo de AUCs para pronóstico</a></li>
+</ul></li>
+<li class="chapter" data-level="5.2" data-path="index-evaluation.html"><a href="index-evaluation.html#pauc"><i class="fa fa-check"></i><b>5.2</b> pAUC</a>
+<ul>
+<li class="chapter" data-level="5.2.1" data-path="index-evaluation.html"><a href="index-evaluation.html#introducción-2"><i class="fa fa-check"></i><b>5.2.1</b> Introducción</a></li>
+<li class="chapter" data-level="5.2.2" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-paucs-en-regiones-de-alta-especificidad"><i class="fa fa-check"></i><b>5.2.2</b> Cálculo de pAUCs en regiones de alta especificidad</a></li>
+<li class="chapter" data-level="5.2.3" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-paucs-en-regiones-de-alta-sensibilidad"><i class="fa fa-check"></i><b>5.2.3</b> Cálculo de pAUCs en regiones de alta sensibilidad</a></li>
+</ul></li>
+<li class="chapter" data-level="5.3" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-derivados-de-pauc"><i class="fa fa-check"></i><b>5.3</b> Índices derivados de pAUC</a>
+<ul>
+<li class="chapter" data-level="5.3.1" data-path="index-evaluation.html"><a href="index-evaluation.html#problemas-del-pauc"><i class="fa fa-check"></i><b>5.3.1</b> Problemas del pAUC</a></li>
+<li class="chapter" data-level="5.3.2" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-para-la-especificidad"><i class="fa fa-check"></i><b>5.3.2</b> Índices para la especificidad</a></li>
+<li class="chapter" data-level="5.3.3" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-para-la-sensibilidad"><i class="fa fa-check"></i><b>5.3.3</b> Índices para la sensibilidad</a></li>
+</ul></li>
+<li class="chapter" data-level="5.4" data-path="index-evaluation.html"><a href="index-evaluation.html#comparación-de-índices"><i class="fa fa-check"></i><b>5.4</b> Comparación de índices</a>
+<ul>
+<li class="chapter" data-level="5.4.1" data-path="index-evaluation.html"><a href="index-evaluation.html#agrupar-por-condiciones"><i class="fa fa-check"></i><b>5.4.1</b> Agrupar por condiciones</a></li>
+<li class="chapter" data-level="5.4.2" data-path="index-evaluation.html"><a href="index-evaluation.html#marcadores-para-diagnóstico"><i class="fa fa-check"></i><b>5.4.2</b> Marcadores para diagnóstico</a></li>
+<li class="chapter" data-level="5.4.3" data-path="index-evaluation.html"><a href="index-evaluation.html#marcadores-para-pronóstico"><i class="fa fa-check"></i><b>5.4.3</b> Marcadores para pronóstico</a></li>
+</ul></li>
+<li class="chapter" data-level="5.5" data-path="index-evaluation.html"><a href="index-evaluation.html#resultados"><i class="fa fa-check"></i><b>5.5</b> Resultados</a>
+<ul>
+<li class="chapter" data-level="5.5.1" data-path="index-evaluation.html"><a href="index-evaluation.html#rendimiento-de-métricas"><i class="fa fa-check"></i><b>5.5.1</b> Rendimiento de métricas</a></li>
+<li class="chapter" data-level="5.5.2" data-path="index-evaluation.html"><a href="index-evaluation.html#relevancia-clínica"><i class="fa fa-check"></i><b>5.5.2</b> Relevancia clínica</a></li>
+</ul></li>
+<li class="chapter" data-level="5.6" data-path="index-evaluation.html"><a href="index-evaluation.html#discusión-y-conclusiones"><i class="fa fa-check"></i><b>5.6</b> Discusión y conclusiones</a></li>
+</ul></li>
+<li class="appendix"><span><b>Apéndice</b></span></li>
+<li class="chapter" data-level="A" data-path="session-info.html"><a href="session-info.html"><i class="fa fa-check"></i><b>A</b> Información de la sesión</a></li>
+<li class="chapter" data-level="" data-path="referencias.html"><a href="referencias.html"><i class="fa fa-check"></i>Referencias</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico</h1>
+<p class="author"><em>Pablo Navarro</em></p>
+</div>
+<div id="introducción" class="section level1 unnumbered hasAnchor">
+<h1>Introducción<a href="introducción.html#introducción" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Los avances en tecnologías de alto rendimiento están permitiendo la identificación simultánea de un gran número de clasificadores para ayudar en la toma de decisiones de procesos relevantes. Las curvas de características operativas de receptor (<span class="math inline">\(ROC\)</span>), y especialmente el área bajo las curvas <span class="math inline">\(ROC\)</span> (<span class="math inline">\(AUC\)</span>), son herramientas útiles para evaluar y comparar el rendimiento de estos clasificadores en aplicaciones biomédicas y bioinformáticas.</p>
+<p>De esta forma, se puede describir la utilidad del clasificador para evaluar procesos discriminatorios, e.g. clasificando enfermedades con biomarcadores y paneles de expresión, seleccionando genes diferencialemente expresados en experimentos, etcétera. Es más, actualmente se han desarrollado diversos paquetes de software estadístico que facilitan el análisis utilizando estas curvas <span class="math inline">\(ROC\)</span>.</p>
+<p>Sin embargo, cuando una tarea requiere de una determinada precisión, el <span class="math inline">\(AUC\)</span> no es un índice significativo del rendimiento del clasificador. Así, nuevas herramientas analíticas han sido propuestas y ampliamente usadas en investigación bajo rangos preestablecidos de especificidad y sensibilidad, sin embargo hasta ahora los métodos basados en curvas <span class="math inline">\(ROC\)</span> no han sido sensibles cuando existen puntos que se cruzan en distintas curvas.</p>
+<p>El objetivo de este trabajo es estudiar índices de áreas parciales los cuales permiten comparar porciones de estas curvas <span class="math inline">\(ROC\)</span>, así como su utilidad en aplicaciones biomédicas y bioinformáticas.</p>
+<div id="conjuntos-de-datos" class="section level2 unnumbered hasAnchor">
+<h2>Conjuntos de datos<a href="introducción.html#conjuntos-de-datos" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>En la evaluación de los distintos índices se utilizarán muestras de pacientes con cáncer de próstata (PCa), puesto que esta enfermedad presenta un escenario dónde estudiar regiones de las curvas <span class="math inline">\(ROC\)</span> es necesario. Resultados de experimentos de <em>single cell RNA sequencing</em> (scRNA-seq) se utilizarán para la selección de marcadores relevantes en la enfermedad. Seleccionados los marcadores, sus niveles de expresión se contrastarán con muestras de pacientes enfermos en experimentos <em>bulk RNA sequencing</em> (RNA-seq).</p>
+<p>Los datos del experimento de scRNA-seq provienen de muestras de 2 pacientes diagnosticados con PCa. Este diagnóstico fue realizado a través de observaciones morfológicas (puntuaciones de Gleason de 6 y 7) y ante la presencia de marcadores de la enfermedad, <em>AMACR</em> y <em>TP63</em>. Los conjuntos de datos en crudo y procesados se encuentran disponibles en <em>Gene Expression Omnibus</em> (GEO) bajo el identificador <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE157703">GSE157703</a>.</p>
+<p>Los conjuntos de datos utilizados para contrastar los marcadores fueron extraídos de <em>The Cancer Genome Atlas</em> (TCGA), considerando aquellos provenientes de tejidos de próstata y experimentos de RNA-seq<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>.</p>
+</div>
+<div id="software-utilizado" class="section level2 unnumbered hasAnchor">
+<h2>Software utilizado<a href="introducción.html#software-utilizado" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>En la siguiente sección se indican las librerías utilizadas, así como una pequeña descripción indicando el motivo de su uso. Información más detallada de la sesión utilizada durante el trabajo se puede encontrar en el Apéndice <a href="session-info.html#session-info">A</a>.</p>
+<div id="librerías-externas" class="section level3 unnumbered hasAnchor">
+<h3>Librerías externas<a href="introducción.html#librerías-externas" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Las librerías externas utilizadas se pueden agrupar según su uso dado durante el análisis:</p>
+<ol style="list-style-type: decimal">
+<li>Lectura de archivos:
+<ul>
+<li><strong>readr</strong>. Lectura de archivos de propósito general <span class="citation">(<a href="referencias.html#ref-R-readr">Wickham, Hester, and Bryan 2024</a>)</span>.</li>
+<li><strong>data.table</strong>. Lecturas de archivos de gran tamaño, en concreto archivos de experimentos de scRNA-seq <span class="citation">(<a href="referencias.html#ref-R-data.table">Barrett et al. 2024</a>)</span>.</li>
+</ul></li>
+<li>Manipulación de tablas de datos:
+<ul>
+<li><strong>tibble</strong>. Creación de objetos <code>tibble</code>, análogos de <code>data.frame</code> pero más estrictos, evitar posibles errores durante su manipulación <span class="citation">(<a href="referencias.html#ref-R-tibble">Müller and Wickham 2023</a>)</span>.</li>
+<li><strong>dplyr</strong>. Selección, filtrado, ordenación, creación etc. de filas y columnas en conjuntos de datos <span class="citation">(<a href="referencias.html#ref-R-dplyr">Wickham et al. 2023</a>)</span>.</li>
+<li><strong>tidyr</strong>. Organización del conjunto de datos en filas y columnas. Utilizado para transformar genes y/o muestras en filas y columnas en el conjunto de datos según sea necesario <span class="citation">(<a href="referencias.html#ref-R-tidyr">Wickham, Vaughan, and Girlich 2024</a>)</span>.</li>
+</ul></li>
+<li>Análisis de scRNA-seq:
+<ul>
+<li><strong>Seurat</strong>. Librería que provee herramientas para trabajar con matrices de cuentas en experimentos de scRNA-seq, además de procesar y analizar los datos <span class="citation">(<a href="referencias.html#ref-R-Seurat">Satija 2024</a>)</span>.</li>
+</ul></li>
+<li>Análisis de <span class="math inline">\(AUC\)</span>:
+<ul>
+<li><strong>pROC</strong>. Librería que permite el cálculo de <span class="math inline">\(AUC\)</span>s y <span class="math inline">\(pAUC\)</span>s. Además también permite calcular el <span class="math inline">\(SpAUC\)</span>, una transformación del <span class="math inline">\(pAUC\)</span> que se tratará más adelante <span class="citation">(<a href="referencias.html#ref-R-pROC">Robin et al. 2023</a>)</span>.</li>
+<li><strong>ROCpAI</strong>. Librería de <a href="https://bioconductor.org/">Bioconductor</a> que permite analizar curvas <span class="math inline">\(ROC\)</span> en regiones de alta especificidad además de calcular el <span class="math inline">\(TpAUC\)</span>, otra transformación del <span class="math inline">\(pAUC\)</span> que también se tratará <span class="citation">(<a href="referencias.html#ref-R-ROCpAI">Garcia, Franco, and Vivo 2024</a>)</span>.</li>
+</ul></li>
+<li>Misceláneo:
+<ul>
+<li><strong>stringr</strong>. Librería para trabajar de forma más sencilla con strings <span class="citation">(<a href="referencias.html#ref-R-stringr">Wickham 2023b</a>)</span>.</li>
+<li><strong>purrr</strong>. Librería que provee herramientas de programación funcional <span class="citation">(<a href="referencias.html#ref-R-purrr">Wickham and Henry 2023</a>)</span>.</li>
+<li><strong>forcats</strong>. Librería que provee herramientas para trabajar con objetos de tipo factor <span class="citation">(<a href="referencias.html#ref-R-forcats">Wickham 2023a</a>)</span>.</li>
+<li><strong>biomaRt</strong>. Librería que provee una interfaz para conectar a las bases de datos de <a href="https://www.ensembl.org/info/data/biomart/index.html">BioMart</a>, utilizada para encontrar genes por sus identificadores y viceversa <span class="citation">(<a href="referencias.html#ref-R-biomaRt">Durinck and Huber 2024</a>)</span>.</li>
+</ul></li>
+</ol>
+</div>
+<div id="librerías-propias" class="section level3 unnumbered hasAnchor">
+<h3>Librerías propias<a href="introducción.html#librerías-propias" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Además de las librerías externas mencionadas, para facilitar el análisis de índices derivados de áreas parciales se ha desarrollado la librería <strong>ROCnGO</strong>. Esta librería además de proveer herramientas para el cálculo de los índices anteriormente comentados, también permite aplicar estos cálculos al conjunto de datos entero automatizando en gran medida la tarea. La librería también incluye otros dos índices derivados adicionales, el <span class="math inline">\(NpAUC\)</span> y el <span class="math inline">\(FpAUC\)</span>, que también se tratarán más adelante. Finalmente, también incluye herramientas para graficar este tipo de curvas y las regiones en las que se encuentran comprendidas utilizando una sintaxis sencilla, lo que facilita la comparación de clasificadores.</p>
+<p>Actualmente la librería se puede obtener a través de su repositorio de <a href="https://github.com/pabloPNC/ROCnGO">GitHub</a> utilizando la siguiente función.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="introducción.html#cb1-1" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="at">repo =</span> <span class="st">&quot;pabloPNC/ROCnGO&quot;</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="estructura" class="section level2 unnumbered hasAnchor">
+<h2>Estructura<a href="introducción.html#estructura" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>La primera parte del trabajo se centrará en encontrar marcadores expresados específicamente en células cancerosas. En la Sección <a href="luminal-cells-selection.html#luminal-cells-selection">1</a>, utilizando los datos de experimentos de scRNA-seq, se identificarán las células del tejido que se corresponden con células luminales de próstata, las precursoras de la enfermedad. En la Sección <a href="cancer-cells-selection.html#cancer-cells-selection">2</a> se identificarán las células malignas entre las seleccionadas previamente así como los marcadores que expresan.</p>
+<p>En la segunda parte del trabajo se generará el conjunto de datos sobre el que se analizarán los distintos clasificadores. En la Sección <a href="count-matrix-generation.html#count-matrix-generation">3</a> se procesarán los datos del TCGA para generar una matriz de cuentas que incluirá los genes expresados en diversas muestras de tejido. En la Sección <a href="count-matrix-filtering.html#count-matrix-filtering">4</a> se filtrará esta matriz para seleccionar los genes indentificados en la primera parte, de esta forma se obtendrá una matriz que solamente contendrá clasificadores relevantes para la enfermedad, eliminando ruido en el proceso.</p>
+<p>Finalmente en la tercera parte del trabajo (Sección <a href="index-evaluation.html#index-evaluation">5</a>), se calcularán y analizarán los distintos índices para los clasificadores seleccionados en regiones de alta sensibilidad y especificidad de la curva. En la sección también se expondrán las limitaciones de estos índices, para finalmente evaluar su utilidad como métrica considerando clasificadores que actualmente son utilizados en el ámbito clínico.</p>
+
+</div>
+</div>
+
+
+
+<div class="footnotes">
+<hr />
+<ol start="1">
+<li id="fn1"><p>Además de los criterios indicados, solo se consideraron los datos depositados previamente a la última fecha de consulta (11/06/24).<a href="introducción.html#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="luminal-cells-selection.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>
