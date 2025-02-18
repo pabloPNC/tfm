@@ -1,13 +1,8 @@
----
-title: "Marker selection"
-author: "Pablo Navarro Carpio"
-date: "31/07/2024"
-output: html_document
----
+# Selección de células cancerosas y marcadores {#cancer-cells-selection}
 
-# 1. Importar librerías y datos
+En esta sección se identificarán las células malignas entre las luminales previamente seleccionadas. Tras ello, los genes expresados por estas células serán seleccionados para análisis posteriores.
 
-```{r Librerias}
+```{r Librerias, include=FALSE}
 library(Seurat)
 library(dplyr)
 library(purrr)
@@ -15,26 +10,21 @@ library(stringr)
 library(tibble)
 ```
 
-Esta parte utilizará el objeto creado en la parte anterior, por lo que será necesario importarlo.
-
-```{r Importando objetos necesarios}
+```{r Importando objetos necesarios, include=FALSE}
 luminal_cells <- readRDS("./rds_objects/01_luminal_object.rds")
 significative_markers <- readRDS("./rds_objects/01_significative_markers.rds")
 ```
 
-# 2. DEG en células luminales
+## DEG en células luminales {#deg-luminal-cells}
 
-Como se ha explicado anteriormente, el objeto importado es un `SeuratObject` que contiene un subconjunto de todas las células del experimento, aquellas que han sido identificadas como células luminales de la prostata.
+Los tejidos de cáncer de próstata presentan una gran heterogeneidad, incluso entre células del mismo tipo [@tumor-heterogeneity], por este motivo es conveniente realizar una búsqueda de subpoblaciones en el conjunto de datos seleccionado. Esta búsqueda más detallada permite revelar información según los genes que expresen estas subpoblaciones, algunos ejemplos:
 
-Los tejidos de cáncer de prostrata presentan una gran heterogeneidad, incluso en células del mismo tipo, por lo que es conveniente intentar encontrar subpoblaciones de células dentro de este subconjunto. Está búsqueda puede además mostrar las causas de las diferencias entre estas poblaciones, por ejemplo: una mayor expresión de genes relacionados con el desarrollo de la enfermedad, lo cual puede ser un indicativo de células malignas o bien que estén en proceso de carcinogénesis.
++ **Poblaciones con roles específicos**\. Marcadores diferencialmente expresados, dentro de un mismo tipo celular, pueden ser indicativos de subpoblaciones que realicen funciones específicas en el desarrollo de la enfermedad.
++ **Estado de las células**\. La presencia de ciertos marcadores puede indicar el estado en el que se encuentra un célula, e.g. células malignas o en proceso de carcinogénesis.
 
-## 2.1. Caracterización y selección de los clusters
+### Caracterización y selección de los clusters
 
-Podemos aplicar un proceso similar a como se han encontrado los marcadores para los clusters todos, a clusters concretos.
-
-En este caso, en lugar de comparar las células de un cluster con el resto del conjunto de datos, podemos hacer una comparativa con las células presentes en clusters concretos.
-
-Para ello podemos utilizar la función `Seurat::FindMarkers` indicando en `ident.1` e `ident.2` el número de los cluster que queremos comparar.
+Para la búsqueda de DEGs en los cluster seleccionados, se puede aplicar un proceso similar al de la sección anterior (\@ref(degs-search)). La única diferencia será que en este caso se compararán células de clusters concretos, por lo que en su lugar, se usará la función `Seurat::FindMarkers` indicando en `ident.1` e `ident.2` el número de los clusters que se han de comparar.
 
 ```{r Marcadores de clusters 8 y 14}
 markers_cluster_8 <- FindMarkers(
@@ -50,7 +40,7 @@ markers_cluster_14 <- FindMarkers(
 )
 ```
 
-De igual forma que en el caso anterior, filtraremos los resultados significativos. Para poder trabajar de forma más cómoda con los datos uniremos ambas tablas y pasaremos el nombre del gen a una columna.
+Realizada la búsqueda de marcadores, se seleccionarán aquellos resultados significativos. Además, para trabajar de forma más cómoda con ellos, se fusionarán en una sola tabla con la función `dplyr::bind_rows` y añadirá una nueva columna con el nombre de estos genes (`tibble::rownames_to_column`).
 
 ```{r Filtrado de marcadores significativos}
 markers_cluster_8 <- markers_cluster_8 %>%
@@ -66,9 +56,9 @@ markers_cluster_14 <- markers_cluster_14 %>%
 markers <- bind_rows(markers_cluster_8, markers_cluster_14)
 ```
 
-Después de comprobar los genes expresados positivamente en cada uno de los clusters se pueden identificar ciertos marcadores que tienen cierta relevancia en la enfermedad. Para visualizarlos de forma más sencilla y poder comparar las expresiones de los genes de ambos clusters, seleccionaremos estos genes del conjunto de datos y los ordenaremos por nombre.
+Tras seleccionar los genes expresados diferencialmente en cada uno de los clusters, se pueden identificar marcadores de relevancia en la enfermedad. Para visualizarlos de forma más simple y contrastar su expresión en ambos clusters, estos genes serán preseleccionados y ordenados por su nombre.
 
-```{r Selección de genes relevantes en la enfermedad}
+```{r Selección de genes relevantes en la enfermedad, eval=FALSE}
 genes <- c(
     "KLK3", "FOLH1", "NPY",
     "LXN", "SLPI", "AGR2",
@@ -82,17 +72,36 @@ filtered_markers <- markers %>%
 filtered_markers
 ```
 
-Entre los genes del cluster 8 podemos encontrar *FOLH1*, *NPY* y *KLK3* genes que han sido identificados como marcadores de cáncer de próstata. En contraste con el cluster 14 donde *KLK3* y *NPY* están menos expresados.
+```{r, echo=FALSE}
+genes <- c(
+    "KLK3", "FOLH1", "NPY",
+    "LXN", "SLPI", "AGR2",
+    "CXCL1", "DKK1"
+)
 
-De forma similar los genes *LXN* y *SLPI*, que están expresados en el cluster 14, los cuales son genes supresores de la enfermedad. Es decir, una perdida de la expresión de estos genes está relacionada con un mal pronostico en los pacientes de cáncer.
+filtered_markers <- markers %>%
+    filter(gene %in% genes) %>%
+    arrange(gene)
 
-Sin embargo, el cluster 14 también expresa algunos genes que están muy expresados en pacientes con la enfermedad. *AGR2* se corresponde con un marcador de orina para la enfermedad, mientras que *CXCL1* y *DKK1* están relacionados con la progresión de la enfermedad y con la invasividad de los tumores.
+DT::datatable(
+    filtered_markers,
+    options = list(
+        searching = FALSE,
+        ordering = FALSE,
+        lengthChange = FALSE,
+        scrollX = TRUE
+    )
+) %>%
+    DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
+```
 
-Estas observaciones implican que ambos clusters contienen células con cierto grado de malignidad, sin embargo las células del cluster 14 dado que presentan ciertos genes supresores de la enfermedad, podemos intuir que se pueden estar tratando de células de prostata normales que están sufriendo un proceso de carcinogénesis.
+Entre los genes del cluster 8 es posible encontrar *FOLH1*, *NPY* y *KLK3*, genes identificados como marcadores de cáncer de próstata [@folh1-marker; @npy-marker], en contraste con el cluster 14 donde se encuentran menos expresados. Además, los genes *LXN* y *SLPI*, identificados como supresores de la enfermedad [@slpi-marker; @lxn-marker], se encuentran expresados en el cluster 14. Finalmente, el cluster 14 también expresa genes presentes en pacientes con la enfermedad como: *AGR2*, un marcador de orina de la enfermedad [@agr2-marker], además de *CXCL1* y *DKK1* marcadores relacionados con la progresión de la enfermedad e invasividad de los tumores [@dkk1-marker; @cxcl1-marker].
 
-Podemos visualizar estos resultados con las siguientes gráficas. La primera de ellas, muestra los niveles de expresión de los distintos genes en cada uno de los clusters.
+Estas observaciones implican que ambos cluster contienen células con cierto grado de malignidad. Sin embargo, dado que las células del cluster 14 expresan genes supresores de la enfermedad, puede intuirse que se corresponden con células de próstata normales que están sufriendo un proceso de carcinogénesis.
 
-```{r Gráficos de violín clusters 8 y 14}
+Es posible visualizar la expresión de los distintos genes con las siguientes gráficas. La figura \@ref(fig:clusters-violin) muestra los niveles de expresión de los distintos genes en cada uno de los clusters, mientras que, la figura \@ref(fig:clusters-umap) muestra un extracto del UMAP generado con todas las células y la expresión de los genes en cada una de ellas.
+
+```{r clusters-violin, fig.cap="Niveles de expresión en clusters 8 y 14"}
 VlnPlot(
     luminal_cells,
     idents = c(8, 14),
@@ -100,9 +109,7 @@ VlnPlot(
 )
 ```
 
-La segunda gráfica es un extracto del UMAP generado con todas las células. En este caso solo se muestran la expresión de los genes indicados en cada célula del cluster, de esta forma podemos comprobar "espacialmente" dónde se encuentran más expresados cada uno.
-
-```{r Niveles de expresión en UMAP}
+```{r clusters-umap, fig.cap="Expresión de genes en clusters 8 y 14"}
 FeaturePlot(
     luminal_cells,
     features = genes,
@@ -110,17 +117,17 @@ FeaturePlot(
 )
 ```
 
-Teniendo en cuenta estos resultados, seleccionaremos las células del cluster 8 para seguir trabajando con ellas. La razón de ello se debe a que estamos interesados en estudiar genes presentes en células cancerosas que puedan ser utilizados como biomarcadores de diagnostico así como de pronóstico o estratificación, de esta forma las células de este cluster son más relevantes que células normales en proceso de transformación, es decir del cluster 14.
+Considerando los resultados, se seleccionaran las células del cluster 8 para seguir trabajando con ellas. La razón para ello se debe a que en este trabajo se buscará evaluar biomarcadores de diagnóstico así como de estratificación de riesgo, de esta forma las células de este cluster serán más relevantes que células normales en proceso de transformación, es decir del cluster 14.
 
-# 3. Selección de subpoblaciones
+## Búsqueda de subpoblaciones
 
-## 3.1. Repetición del flujo de trabajo
+En la sección anterior se han seleccionado las células luminales que presentan cierto grado de malignidad. Sin embargo, como se ha explicado en la sección \@ref(deg-luminal-cells), también puede ser interesante comprobar si existe cierta variabilidad dentro del cluster. Expresado en otras palabras, es interesante comprobar si hay células con perfiles de expresión distintos, ya que puede ser indicativo de células con papeles concretos en el desarrollo de la enfermedad.
 
-En el apartado anterior se han seleccionado las células luminales que presentan cierto grado de malignididad. Sin embargo, como se ha explicado anteriormente, también puede ser interesante comprobar si dentro del grupo seleccionado se observa también cierta variabilidad encontrando células con distintos papeles.
+### Repetición del flujo de trabajo
 
-De esta forma repetiremos el procedimiento realizado hasta ahora para identificarlas. Para realizarlo de forma más sencilla, los pasos a realizar se han incluido dentro de una función.
+Para comprobar la presencia de estas células basta con repetir el procedimiento realizado hasta ahora, con la única diferencia de que en lugar de utilizar el conjunto de datos al completo, se utilizarán solo las células del cluster seleccionado. Para realizar este proceso se seleccionarán en primer lugar las células del cluster 8 con la función `subset`, tras ello se definirá la función `seurat_standard_workflow` la cual realizará los primeros pasos del procedimiento descrito en la sección \@ref(luminal-cells-selection).
 
-```{r Búsqueda de subpoblaciones}
+```{r Búsqueda de subpoblaciones, warning=FALSE, message=FALSE}
 
 malignant_luminal_cells <- subset(
     luminal_cells,
@@ -143,15 +150,15 @@ seurat_standard_workflow <- function(seurat_object) {
 malignant_luminal_cells <- seurat_standard_workflow(malignant_luminal_cells)
 ```
 
-De forma similar al caso anterior, para identificar la dimensionalidad de nuestro conjunto de datos, utilizaremos el "método del codo".
+A la hora de seleccionar la dimensionalidad del conjunto de datos se utilizará el "método del codo". Como se puede observar en la figura \@ref(fig:elbow-plot-cluster8) la pendiente de la gráfica se reduce poco después de la componente número 10. Sin embargo, para mayor seguridad, se tomará hasta la componente 20 dado que en ella se puede observar una reducción todavía más pronunciada.
 
-```{r Método del codo}
+```{r elbow-plot-cluster8, fig.cap="Método del codo para las componentes del cluster 8"}
 ElbowPlot(malignant_luminal_cells, ndims = 50)
 ```
 
-En este caso podemos observar como se reduce la pendiente de la gráfica un poco después de la componente número 10. Sin embargo, para mayor seguridad se tomará la componente 20 como límite, puesto que en ella es donde se observar una reducción todavía más pronunciada. 
+Finalmente, se realizará la búsqueda de nuevos clusters. Para ello se define la función `seurat_cluster_search`, la cual automatizará el proceso realizado en la sección anterior (\@ref(clustering)). 
 
-```{r Búsqueda de clusters}
+```{r Búsqueda de clusters, warning=FALSE, results='hide', message=FALSE}
 seurat_cluster_search <- function(seurat_object, dims, reduction = "pca") {
     seurat_object <- FindNeighbors(
         seurat_object,
@@ -170,9 +177,9 @@ malignant_luminal_cells <- seurat_cluster_search(
 )
 ```
 
-Para la visualización de las células podemos realizar un UMAP.
+Realizada la búsqueda de nuevos clusters, se aplicará un UMAP para visualizar las células en sus respectivos clusters (figura \@ref(fig:umap-cluster8)).
 
-```{r Ejecución y graficado de UMAP}
+```{r umap-cluster8, warning=FALSE, message=FALSE, results='hide', fig.cap="UMAP de las células en el cluster 8"}
 malignant_luminal_cells <- RunUMAP(
     malignant_luminal_cells,
     dims = 1:20,
@@ -185,166 +192,56 @@ DimPlot(
     label = TRUE
 )
 ```
-## 3.2. Interpretación de resultados
 
-En la imagen se pueden observar 2 subgrupos relativamente bien separados. Esto puede ser causa, de forma similar que en el caso anterior, de la heterogeneidad de las células cancerosas, por lo que sería conveniente identificar de nuevo marcadores diferenciados que puedan arrojar algo de luz sobre el papel de cada una de las subpoblaciones.
+### Interpretación de resultados
 
-```{r Búsqueda de marcadores en subpoblaciones}
+En la figura \@ref(fig:umap-cluster8) es posible observar 2 subgrupos relativamente bien separados. Una posible causa para su formación podría ser la heterogeneidad de las células cancerosas, como se ha explicado previamente en la sección \@ref(deg-luminal-cells). Por este motivo, es conveniente indentificar de nuevo marcadores diferenciados que arrojen algo de luz sobre el papel de cada una de estas posibles subpoblaciones.
+
+```{r Búsqueda de marcadores en subpoblaciones, eval=FALSE}
 all_subpopulation_markers <- FindAllMarkers(
     malignant_luminal_cells
 )
 all_subpopulation_markers
 ```
+```{r table-malignant-markers, echo=FALSE, message=FALSE, warning=FALSE}
+all_subpopulation_markers <- FindAllMarkers(
+    malignant_luminal_cells
+)
 
-Una primera exploración sobre los DEG no revela información sobre el papel de los 2 subclusters identificados. Para intentar averiguar funciones concretas de los respectivos clusters se ha realizado un enriquecimiento funcional utilizando la herramienta provista por ["The Gene Ontology consortium"](https://geneontology.org/). Para realizar el enriquecimiento seleccionamos los genes con un `avg_log2FC` superior a 1 y que presenten un `p_val_adj` inferior o igual a $0.05$. 
-
-El subcluster 1 cuenta con un reducido número de DEG significativos que están más expresados que en el 0. Aún así, tras realizar el análisis funcional estos parecen estar relacionados con el transporte de biomoléculas. En contraposición, el subcluster 0 sí que presenta un gran número de genes expresados diferencialmente. Los procesos en los que parecen estar involucradas estas células son principalemente procesos metabólicos de distintas moléculas (ATP, iones, etc.) y además procesos de transporte.
-
-Con los resultados observamos que las diferencias pueden deberse a la capacidad del subcluster 0 para estar involucrado en procesos metabólicos. Sin embargo, dado que ambos cluster parecen tener funciones enfocadas al transporte de moléculas y dado que estamos trabajando a unas escalas muy pequeñas podríamos reconsiderar la validez de estos subgrupos.
-
-La formación de los clusters, no deja de ser un proceso matemático que aplicamos a un conjunto de células. En este caso, el procedimiento se ha aplicado a un conjunto de células en un intento de "aumentar la resolución". Se intenta encontrar poblaciones más pequeñas, seleccionando variables específicas de ese subconjunto. Matemáticamente los resultados pueden ser coherentes, pero no tiene porque garantizar que tenga un significado biológico. Un error común con este tipo de procedimientos es aumentar demasiado la resolución, obteniendo muchos clusters de pequeño tamaño con células del mismo tipo.
-
-De esta forma, la interpretabilidad de estos resultados juega un papel crucial para no afectar a los análisis aguas abajo. En este caso, el cluster 8 ya contaba con un relativo bajo número de células, en donde sí hemos podido contrastar que estabamos trabajando con células luminales de prostata cancerosas. Tras hacer el subclustering y no poder validar de alguna forma las subpoblaciones obtenidas, seguiremos trabajando con el cluster 8 en su totalidad.
-
-# 4. Selección de marcadores
-
-Una vez decidido que se trabajará con el cluster 8 en su totalidad se deben seleccionar los marcadores de dicho grupo que utilizaremos en análisis posteriores. Para ello lugar seleccionaremos los DEG sobreexpresados con respecto a los demás tejidos (`avg_log2FC` > 1).
-
-```{r DEG cluster 8}
-markers_cluster_8 <- significative_markers %>% filter(cluster == 8) %>% filter(avg_log2FC > 1)
+DT::datatable(
+    all_subpopulation_markers,
+    options = list(
+        searching = TRUE,
+        ordering = FALSE,
+        lengthChange = FALSE
+    )
+) %>%
+    DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
 ```
 
-Finalmente guardaremos los marcadores seleccionados en un archivo para utilizarlos posteriormente
+Una primera exploración sobre los DEG no revela información sobre el papel de los 2 subclusters identificados, por ello para intentar averiguar funciones concretas de los cluster se ha realizado un enriquecimiento funcional utilizando la herramienta provista por ["The Gene Ontology consortium"](https://geneontology.org/). Para este proceso, solamente los genes con un `avg_log2FC` superior a $1$ y `p_val_adj` igual o inferior a $0.05$ han sido sido seleccionados.
 
-```{r Serilización}
+El cluster 1 cuenta con un reducido número de DEG significativos, los cuales parecen estar relacionados con el transporte de biomoléculas. Por otra parte, el cluster 0 presentan un gran número de DEG involucrados en procesos de transporte y metabólicos de distintas moléculas (ATP, iones, etc.)
+
+Aunque en la búsqueda de clusters haya realizado una separación, ambos cluster parecen presentar funciones relativamente similares. Ambos cluster tienen funciones enfocadas al transporte de moléculas, con la única de diferencia de tomar parte en algunos procesos metabólicos. Estas similitudes podrían hacer reconsiderar la validez de estos clusters como subpoblaciones.
+
+La formación de clusters no deja de ser un proceso matemático que se aplica al conjunto células. En este caso, esta técnica se ha aplicado para "aumentar la resolución" y así tratar de encontrar poblaciones de células más pequeñas. Matemáticamente estos resultados pueden ser coherentes, pero no hay una garantía de que tengan un significado biológico. Un error común con este tipo de procedimiento es aumentar demasiado la resolución, obteniendo así muchos cluster poco poblados, donde aunque células presenten similitudes relevantes puedan acabar en grupos distintos. De esta forma, la interpretabilidad de los resultados juega un papel crucial para no influir negativamente en los análisis posteriores.
+
+Trasladado a este caso, el cluster 8 ya contaba con un número bajo de células, con las cuales sí que se ha podido contrastar que se trataban de células luminales de próstata con cierta malignidad. Al volver a aplicar las técnicas de clustering y no poder validar las subpoblaciones obtenidas, se seguirá trabajando con el cluster 8 en su totalidad.
+
+## Selección de marcadores
+
+Una vez decidido que se trabajará con el cluster 8 en su totalidad se seleccionarán los marcadores de este grupo para su uso en análisis posteriores. Por este motivo, se seleccionarán los DEG sobreexpresados con respecto a los demás clusters (`avg_log2FC` > 1).
+
+```{r DEG cluster 8}
+markers_cluster_8 <- significative_markers %>%
+    filter(cluster == 8) %>%
+    filter(avg_log2FC > 1)
+```
+
+```{r Serilización, include=FALSE}
 saveRDS(
     object = markers_cluster_8,
     file = "./rds_objects/02_markes_cluster_8.rds"
 )
 ```
-
-
-
-
-
-
-
-
-
-
-# X. My function
-
-Una vez que se han obtenido aquellos que son significativos, el siguiente paso debería ser establecer unos criterios para considerar cuales son los más relevantes en cada grupo. Diversos puntos que deberían tenerse en cuenta:
-
-+ **Niveles de expresión**. Descritos por el `avg_log2FC`. Un gen con altos niveles de expresión en un grupo de células con respecto al resto, presentará un valor mayor y menor en caso contrario.
-+ **Cantidad de células que expresan el gen**. Descritos por `pct.1` y `pct.2`. De forma intuitiva un gen representativo debería estar expresado en la mayoría de células del cluster e idealmente, en menor medida en el resto.
-
-Considerando estos puntos y de forma arbitraria, los criterios que se han escogido son los siguientes:
-
-1. El porcentaje de células en el cluster que exprese el gen (`pct.1`), debe ser mayor a 0.5.
-1. El `avg_log2FC` debe estar entre los mayores del cluster.
-1. La diferencia entre `pct.1` y `pct.2`debe estar entre los mayores del cluster.
-
-Un gen representativo de un conjunto de células debería estar expresado en la mayoría de ellas, por ello se exige un mínimo, y además con un nivel de expresión diferente al resto de células donde no es representativo.
-
-De forma similar al `avg_log2FC`, la diferencia entre `pct.1` y `pct.2`, debe estar entre los mayores del cluster puesto que nos puede ayudar a diferenciar genes muy presentes en nuestro cluster (`pct.1` mucho mayor que `pct.2`) de genes expresados en general (`pct.1` y `pct.2` similares).
-
-Para realizar estos cálculos de forma más sencilla se utilizará la siguiente función. Esta recibe como valorer iniciales: 
-+ La tabla con los marcadores de cada grupo seleccionado por seurat
-+ Un vector con los clusters sobre los que realizar los cálculos
-+ El número de genes a seleccionar en cada cluster
-
-La función en primer lugar, hará una preparación de los datos:
-1. Agrupará los genes según en el cluster en el que han sido encontrados.
-1. Calculará la diferencia entre el porcentaje de células que expresado en el cluster y el resto de células y la guardará en la columna `pct_diff`.
-1. Eliminará aquellos genes que no presenten un valor p ajustado superior a un $0.05$.
-
-Tras ello para cada cluster se buscarán los $n$ (especificados por `top_n`) marcadores que se encuentren tanto entre los primeros con mayor `avg_log2FC` como `pct_diff`. De esta forma evitaremos encontrar casos que puedan tener uno de estos valores muy bajo y el otro muy alto.
-
-El parámetro `data_frame` se utiliza porque queremos que los resultados se nos devuelvan en forma de `data.frame` en lugar de una lista.
-
-```{r Función de filtrado}
-get_marker_genes <- function(data, clusters, top_n, data_frame = TRUE) {
-    results <- list()
-
-    data <- data %>%
-        mutate(pct_diff = pct.1 - pct.2) %>%
-        group_by(cluster) %>%
-        filter(pct.1 > 0.5) %>%
-        filter(p_val_adj <= 0.05)
-
-    for (selected_cluster in clusters) {
-        print(str_glue("[*] Cluster {selected_cluster}"))
-        cluster_data <- data %>% filter(cluster == selected_cluster)
-        top_pct_diff <- cluster_data %>%
-            slice_max(n = top_n, order_by = pct_diff)
-        top_avg_log <- cluster_data %>%
-            slice_max(n = top_n, order_by = avg_log2FC)
-        intersected_markers <- intersect(
-            top_pct_diff,
-            top_avg_log
-        )
-
-        number_of_markers <- nrow(intersected_markers)
-        max_num_markers <- nrow(cluster_data)
-        number_of_markers_to_check <- top_n
-
-        while (
-            (number_of_markers < top_n) &&
-            (number_of_markers_to_check < max_num_markers)
-        ) {
-            top_pct_diff <- cluster_data %>%
-                slice_max(
-                    n = number_of_markers_to_check,
-                    order_by = pct_diff
-                )
-            top_avg_log <- cluster_data %>%
-                slice_max(
-                    n = number_of_markers_to_check,
-                    order_by = avg_log2FC
-                )
-            intersected_markers <- intersect(
-                top_pct_diff,
-                top_avg_log
-            )
-
-            number_of_markers_to_check <- number_of_markers_to_check + 1
-            number_of_markers <- nrow(intersected_markers)
-        }
-        results[[str_glue("cluster_{selected_cluster}")]] <- list(
-            intersected_markers = intersected_markers,
-            top_pct_diff = top_pct_diff,
-            top_avg_log = top_avg_log
-        )
-
-    }
-
-    if (data_frame == FALSE) {
-        return(results)
-    } else {
-        results <- reduce(results, \(x, y) {
-            list(
-                intersected_markers = bind_rows(
-                    x[["intersected_markers"]],
-                    y[["intersected_markers"]]
-                ),
-                top_pct_diff = bind_rows(
-                    x[["top_pct_diff"]],
-                    y[["top_pct_diff"]]
-                ),
-                top_avg_log = bind_rows(
-                    x[["top_avg_log"]],
-                    y[["top_avg_log"]]
-                )
-            )
-        })
-        return(results[["intersected_markers"]])
-    }
-
-}
-```
-
-
-Para llamar a la función indicaremos, el número de clusters en nuestros datos, puesto que haremos los calculos sobre todos ellos. Finalmente trataremos de seleccionar los 10 primeros marcadores y que los resultados se nos devuelvan en forma de `data.frame`. Pero antes tendremos que juntar los datos en una sola tabla indicando el cluster del que provienen y añadiendo el nombre del gen con el que se trabaja.
-
-

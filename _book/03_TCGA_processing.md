@@ -4,14 +4,7 @@
 
 En esta sección se trabajará con datos de experimentos de RNA-seq, los cuales han sido extraídos de TCGA, para generar una matriz de cuentas con genes expresados en la enfermedad. Esta matriz será procesada en pasos posteriores para finalmente ser utilizada para evaluar el rendimiento de los diversos índices.
 
-```{r Importar librerías, warning=FALSE, include=FALSE}
-library(readr)
-library(dplyr)
-library(stringr)
-library(purrr)
-library(tidyr)
-library(forcats)
-```
+
 
 ## Descripción de los datos
 
@@ -44,7 +37,8 @@ Para esta tarea, se ha creado un script en python (`tcga_metadata_processing.py`
 
 Realizados estos pasos, el script genera el archivo `file_clinical_sheet.csv`, el cual contiene la información necesaria de cada archivo y las variables clínicas de cada paciente del que proviene la muestra. Finalmente, para trabajar con estos archivos, se guardaran las rutas en las que se encuentran.
 
-```{r Rutas}
+
+```r
 tcga_data_folder <- "./tcga_data/gdc_download_20240611_200434.803317"
 file_clinical_path <- "./file_clinical_sheet.csv"
 ```
@@ -71,7 +65,8 @@ ENSG00000000419.13	DPM1	protein_coding	745	398	347	73.8513	21.3158	20.5164
 Conociendo la estructura de los archivos es posible planificar una forma de automatizar el proceso para todos ellos. En primer lugar, se deberán de leer y para ello se define la función `to_tsv`. La función simplemente lee el archivo en la ruta especificada (`file_path`) omitiendo las 6 primeras lineas y utilizando un tabulador como elemento de separación. Tras ello, re-asigna el nombre de las columnas y devuelve la matriz generada.
 
 
-```{r Importar datos}
+
+```r
 to_tsv <- function(file_path) {
     column_names <- c("gene_id", "gene_name", "gene_type", "unstranded",
                       "stranded_first", "stranded_second", "tpm_unstranded",
@@ -110,7 +105,8 @@ $$
 
 Identificadas las variables a utilizar, es posible definir una función para automatizar el proceso. La función `rename_col` utilizará como entrada una matriz de cuentas (`data`) y un nombre que se le provea (`sample_id`), con ellos renombrará la columna `tpm_unstranded` al nombre especificado, más adelante se utilizará para indicar el identificador de la muestra. Finalmente, seleccionará dicha columna junto con la que contiene los identificadores de los genes.
 
-```{r Selección de variables}
+
+```r
 rename_col <- function(data, sample_id) {
     count <- data %>%
         dplyr::rename("{ sample_id }" := tpm_unstranded) %>%
@@ -125,7 +121,8 @@ Estando automatizada la lectura de archivos y selección de variables de interé
 
 La función tomará como entrada 2 matrices de cuentas (`count_matrix_a` y `count_matrix_b`) y utilizará los identificadores de los genes (`gene_id`) para realizar su unión. De esta forma, si hay genes identificados en la segunda matriz que no están en la primera, se añadirá una nueva fila para dicho gen. En caso de que un gen exista en la primera matriz, las cuentas se colocarán en la fila adecuada. De esta forma la función devolverá una matriz donde cada fila se corresponderá a un gen concreto, mientras que cada columna a una muestra.
 
-```{r Unión de matrices de cuentas}
+
+```r
 join_count_matrices <- function(count_matrix_a, count_matrix_b) {
     full_join(
         count_matrix_a,
@@ -141,7 +138,8 @@ Creadas las funciones para el flujo de trabajo, simplemente basta con poder apli
 
 En primer lugar se define la función `transform_counts`, la cual simplemente aplica las funciones `to_tsv` y `rename_col`, definidas en las secciones \@ref(import-read-files) y \@ref(process-read-files).
 
-```{r transform-counts-def}
+
+```r
 transform_counts <- function(file_path, sample_id) {
     count_matrix <- to_tsv(file_path) %>%
         rename_col(sample_id)
@@ -155,7 +153,8 @@ Tras ello utilizando la función `stringr::str_c` es posible concatenar la ruta 
 
 Teniendo las rutas completas e identificadores, se usará la función `purrr::map2` para iterar simultáneamente sobre 2 inputs y pasarlos en una función. En este caso, se aplicará sobre las rutas (`file_clinical$full_path`) y los identificadores de las muestras (`file_clinical$sample_id`) para pasarlos a la función `transform_counts`. De esta forma se obtendrá una lista de archivos de lecturas procesados.
 
-```{r Procesado de los archivos de cuentas, cache=TRUE, warning=FALSE, message=FALSE, results='hide'}
+
+```r
 file_clinical <- as.data.frame(read_csv(file_clinical_path, col_names = TRUE))
 file_clinical <- file_clinical %>%
     mutate(
@@ -178,7 +177,8 @@ Preprocesados los archivos de lecturas, el siguiente pasó será realizar la uni
 
 De esta forma, cuando se aplica `reduce` con la función `join_count_matrices`, se realizarán uniones de los ficheros de forma consecutiva hasta obtener una única matriz de cuentas.
 
-```{r Unión de matrices, cache=TRUE}
+
+```r
 merged_matrices <- as.data.frame(purrr::reduce(count_matrices, join_count_matrices))
 rownames(merged_matrices) <- merged_matrices$gene_id
 ```
@@ -196,7 +196,8 @@ Como se ha descrito al comienzo de la sección, la estructura de los datos es re
 
 La primera, compactará todas la columnas especificadas (`cols = !gene_id`, es decir todas menos `gene_id`) en una nueva columna (`names_to = "sample"`) y su valores en otra especificada (`values_to = "counts"`). Compactada la información de las muestras, podemos utilizar la segunda para crear nuevas columnas con el nombre de los genes (`names_from = gene_id`) que usen los valores previamente guardados (`values_from = counts`).
 
-```{r Pivotado de la matriz, cache=TRUE}
+
+```r
 tcga_data <- merged_matrices %>%
     pivot_longer(
         cols = !gene_id,
@@ -211,11 +212,14 @@ tcga_data <- merged_matrices %>%
 
 De esta forma, se logra que los genes se correspondan con las columnas y cada entrada con la muestra de un paciente.
 
-```{r print-pivoted-matrix, echo=FALSE}
-knitr::kable(
-    tibble::tibble(tcga_data[1:5, 1:4])
-)
-```
+
+|sample           | ENSG00000000003.15| ENSG00000000005.6| ENSG00000000419.13|
+|:----------------|------------------:|-----------------:|------------------:|
+|TCGA-KK-A8IG-01A |            29.0736|            0.2262|            76.9529|
+|TCGA-G9-A9S7-01A |            50.6646|            0.0459|           106.8449|
+|TCGA-EJ-7789-11A |           111.8758|            1.2765|           114.1114|
+|TCGA-YL-A8SA-01A |            51.1902|            0.0597|            90.8608|
+|TCGA-XK-AAJ3-01A |            36.0334|            0.0000|            63.9224|
 
 ### Cálculo de Gold Standards
 
@@ -223,7 +227,8 @@ Una vez se ha reestructurado la matriz es posible incluir las variables a predec
 
 Estas variables se establecerán a partir de la puntuación de Gleason, por lo que, el primer paso será incluirla en la matriz. Dado que el orden de las muestras es el mismo en la matriz que en la tabla de metadatos, es posible incluir la columna sin mayor dificultad.
 
-```{r Incluir puntuación de Gleason}
+
+```r
 tcga_data[["gleason_score"]] <- file_clinical[["gleason_score"]]
 ```
 
@@ -235,7 +240,8 @@ Incluidas las puntuaciones de Gleason es posible generar las demás variables. E
 
 Con la función `dplyr::mutate` se creará la variable `malignancy` que ,utilizando la función `dplyr::case_when`, clasificará las distintas muestras en `Normal`, `Low Malignancy` y `High Malignancy` según los criterios establecidos. 
 
-```{r Asignando malignidad a las muestras}
+
+```r
 tcga_data <- tcga_data %>%
     mutate(
         malignancy = case_when(
@@ -248,7 +254,8 @@ tcga_data <- tcga_data %>%
 
 Es importante considerar que en pasos posteriores se deberá trabajar con variables binarias, por ello que se requerirá realizar transformaciones adicionales. En primer lugar, se buscará trabajar con marcadores de diagnóstico. Los marcadores de este tipo deberían ser capaces de diferenciar o clasificar entre pacientes sanos y enfermos, por ello, se utilizará la información de la variable `malignancy` para generar una variable que represente estas condiciones. Esta variable será `disease` que, utilizando la función `forcats::fct_collapse`, compactará los valores de `malignancy` de `High Malignancy` y `Low Malignancy` en 1 (enfermos), y valores de `Normal` en 0 (sanos). 
 
-```{r Asignando tejidos enfermos}
+
+```r
 tcga_data <- tcga_data %>%
     mutate(
         disease = fct_collapse(
@@ -261,7 +268,8 @@ tcga_data <- tcga_data %>%
 
 En segundo lugar, se tratará de buscar marcadores de pronóstico o estratificación de riesgo. Los marcadores de este tipo deberían ser capaces de distinguir entre pacientes donde la enfermedad es menos probable que progrese frente a pacientes donde es más probable que lo haga, es decir un cáncer de crecimiento lento y menos agresivo frente a uno de crecimiento rápido y mayor agresividad. En este caso, se realizará un procedimiento similar creando la variable `prognostic`, donde 0 se corresponderá con valores de `Low Malignancy` y de 1 con `High Malignancy`[^4].
 
-```{r Asignando pronósticos}
+
+```r
 tcga_data <- tcga_data %>%
     mutate(
         prognostic = fct_collapse(
@@ -279,12 +287,7 @@ Una vez generada la matriz con los genes y variables a predecir, el conjunto de 
 
 Así, en pasos posteriores, se realizará este filtrado usando los datos provenientes de experimentos de scRNA-seq, para finalmente realizar el análisis de los marcadores seleccionados de forma más óptima.
 
-```{r Serialización del objecto, include=FALSE}
-saveRDS(
-    object = tcga_data,
-    file = "./rds_objects/03_tcga_data.rds"
-)
-```
+
 
 [^2]: El uso de un script de Python para esta tarea ha sido completamente arbitrario. Para algunos de los pasos este lenguaje utiliza una sintaxis más sencilla, sin embargo, estos también podrían haberse realizado con R.
 

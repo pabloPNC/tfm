@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>3 Generación de la matriz de cuentas | Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico</title>
+  <meta name="description" content="3 Generación de la matriz de cuentas | Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  <meta name="generator" content="bookdown 0.40 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="3 Generación de la matriz de cuentas | Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="3 Generación de la matriz de cuentas | Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico" />
+  
+  
+  
+
+<meta name="author" content="Pablo Navarro" />
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="cancer-cells-selection.html"/>
+<link rel="next" href="count-matrix-filtering.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<link href="libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet" />
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="libs/datatables-binding-0.33/datatables.js"></script>
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="libs/dt-core-1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="libs/crosstalk-1.2.1/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.2.1/js/crosstalk.min.js"></script>
+<script src="libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+<link href="libs/nouislider-7.0.10/jquery.nouislider.min.css" rel="stylesheet" />
+<script src="libs/nouislider-7.0.10/jquery.nouislider.min.js"></script>
+<link href="libs/selectize-0.12.0/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="libs/selectize-0.12.0/selectize.min.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html"><i class="fa fa-check"></i>Introducción</a>
+<ul>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#conjuntos-de-datos"><i class="fa fa-check"></i>Conjuntos de datos</a></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#software-utilizado"><i class="fa fa-check"></i>Software utilizado</a>
+<ul>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#librerías-externas"><i class="fa fa-check"></i>Librerías externas</a></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#librerías-propias"><i class="fa fa-check"></i>Librerías propias</a></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="introducción.html"><a href="introducción.html#estructura"><i class="fa fa-check"></i>Estructura</a></li>
+</ul></li>
+<li class="part"><span><b>I Búsqueda de marcadores</b></span></li>
+<li class="chapter" data-level="1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html"><i class="fa fa-check"></i><b>1</b> Selección de células luminales de prostata</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#importar-matrices-de-cuentas"><i class="fa fa-check"></i><b>1.1</b> Importar matrices de cuentas</a></li>
+<li class="chapter" data-level="1.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#preprocesamiento-y-cq"><i class="fa fa-check"></i><b>1.2</b> Preprocesamiento y CQ</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#creación-del-objeto-seurat"><i class="fa fa-check"></i><b>1.2.1</b> Creación del objeto Seurat</a></li>
+<li class="chapter" data-level="1.2.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#lecturas-mapeadas-al-genoma-mitocondrial"><i class="fa fa-check"></i><b>1.2.2</b> Lecturas mapeadas al genoma mitocondrial</a></li>
+<li class="chapter" data-level="1.2.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#normalización"><i class="fa fa-check"></i><b>1.2.3</b> Normalización</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#búsqueda-de-genes-de-alta-variabilidad"><i class="fa fa-check"></i><b>1.3</b> Búsqueda de genes de alta variabilidad</a></li>
+<li class="chapter" data-level="1.4" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#escalado-de-los-datos"><i class="fa fa-check"></i><b>1.4</b> Escalado de los datos</a></li>
+<li class="chapter" data-level="1.5" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#dim-reduction"><i class="fa fa-check"></i><b>1.5</b> Reducción de la dimensionalidad</a></li>
+<li class="chapter" data-level="1.6" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#integración-de-datos"><i class="fa fa-check"></i><b>1.6</b> Integración de datos</a>
+<ul>
+<li class="chapter" data-level="1.6.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#objetivos-de-la-integración"><i class="fa fa-check"></i><b>1.6.1</b> Objetivos de la integración</a></li>
+<li class="chapter" data-level="1.6.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#integración"><i class="fa fa-check"></i><b>1.6.2</b> Integración</a></li>
+</ul></li>
+<li class="chapter" data-level="1.7" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#dimensionalidad-del-conjunto-de-datos"><i class="fa fa-check"></i><b>1.7</b> Dimensionalidad del conjunto de datos</a></li>
+<li class="chapter" data-level="1.8" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#clustering"><i class="fa fa-check"></i><b>1.8</b> Agrupamiento de células</a></li>
+<li class="chapter" data-level="1.9" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#reducción-de-la-dimensionalidad-no-lineal-umap"><i class="fa fa-check"></i><b>1.9</b> Reducción de la dimensionalidad no lineal (UMAP)</a>
+<ul>
+<li class="chapter" data-level="1.9.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#utilidad-del-umap"><i class="fa fa-check"></i><b>1.9.1</b> Utilidad del UMAP</a></li>
+<li class="chapter" data-level="1.9.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#umap"><i class="fa fa-check"></i><b>1.9.2</b> UMAP</a></li>
+<li class="chapter" data-level="1.9.3" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#visualización-del-umap"><i class="fa fa-check"></i><b>1.9.3</b> Visualización del UMAP</a></li>
+</ul></li>
+<li class="chapter" data-level="1.10" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#degs-search"><i class="fa fa-check"></i><b>1.10</b> Búsqueda de genes expresados diferencialmente (DEG)</a></li>
+<li class="chapter" data-level="1.11" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#selección-de-células"><i class="fa fa-check"></i><b>1.11</b> Selección de células</a>
+<ul>
+<li class="chapter" data-level="1.11.1" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#filtrado-de-resultados-significativos"><i class="fa fa-check"></i><b>1.11.1</b> Filtrado de resultados significativos</a></li>
+<li class="chapter" data-level="1.11.2" data-path="luminal-cells-selection.html"><a href="luminal-cells-selection.html#identificación-de-clusters"><i class="fa fa-check"></i><b>1.11.2</b> Identificación de clusters</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html"><i class="fa fa-check"></i><b>2</b> Selección de células cancerosas y marcadores</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#deg-luminal-cells"><i class="fa fa-check"></i><b>2.1</b> DEG en células luminales</a>
+<ul>
+<li class="chapter" data-level="2.1.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#caracterización-y-selección-de-los-clusters"><i class="fa fa-check"></i><b>2.1.1</b> Caracterización y selección de los clusters</a></li>
+</ul></li>
+<li class="chapter" data-level="2.2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#búsqueda-de-subpoblaciones"><i class="fa fa-check"></i><b>2.2</b> Búsqueda de subpoblaciones</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#repetición-del-flujo-de-trabajo"><i class="fa fa-check"></i><b>2.2.1</b> Repetición del flujo de trabajo</a></li>
+<li class="chapter" data-level="2.2.2" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#interpretación-de-resultados"><i class="fa fa-check"></i><b>2.2.2</b> Interpretación de resultados</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="cancer-cells-selection.html"><a href="cancer-cells-selection.html#selección-de-marcadores"><i class="fa fa-check"></i><b>2.3</b> Selección de marcadores</a></li>
+</ul></li>
+<li class="part"><span><b>II Generación del conjunto de datos</b></span></li>
+<li class="chapter" data-level="3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html"><i class="fa fa-check"></i><b>3</b> Generación de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#descripción-de-los-datos"><i class="fa fa-check"></i><b>3.1</b> Descripción de los datos</a>
+<ul>
+<li class="chapter" data-level="3.1.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#clinical-preprocessing"><i class="fa fa-check"></i><b>3.1.1</b> Preprocesamiento del fichero clinical y gdc_sample_sheet</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#creación-de-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.2</b> Creación de matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.2.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#import-read-files"><i class="fa fa-check"></i><b>3.2.1</b> Importar archivos de lecturas</a></li>
+<li class="chapter" data-level="3.2.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#process-read-files"><i class="fa fa-check"></i><b>3.2.2</b> Selección de variables y renombrado</a></li>
+<li class="chapter" data-level="3.2.3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#unión-de-archivos"><i class="fa fa-check"></i><b>3.2.3</b> Unión de archivos</a></li>
+<li class="chapter" data-level="3.2.4" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#construcción-de-la-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.2.4</b> Construcción de la matriz de cuentas</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#procesado-de-la-matriz-de-cuentas"><i class="fa fa-check"></i><b>3.3</b> Procesado de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="3.3.1" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#pivotado-de-la-matriz"><i class="fa fa-check"></i><b>3.3.1</b> Pivotado de la matriz</a></li>
+<li class="chapter" data-level="3.3.2" data-path="count-matrix-generation.html"><a href="count-matrix-generation.html#cálculo-de-gold-standards"><i class="fa fa-check"></i><b>3.3.2</b> Cálculo de Gold Standards</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html"><i class="fa fa-check"></i><b>4</b> Filtrado de la matriz de cuentas</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html#equivalencias-entre-identificadores"><i class="fa fa-check"></i><b>4.1</b> Equivalencias entre identificadores</a></li>
+<li class="chapter" data-level="4.2" data-path="count-matrix-filtering.html"><a href="count-matrix-filtering.html#filtrado-por-los-genes-identificados"><i class="fa fa-check"></i><b>4.2</b> Filtrado por los genes identificados</a></li>
+</ul></li>
+<li class="part"><span><b>III Evaluación de índices</b></span></li>
+<li class="chapter" data-level="5" data-path="index-evaluation.html"><a href="index-evaluation.html"><i class="fa fa-check"></i><b>5</b> Evaluación de índices</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="index-evaluation.html"><a href="index-evaluation.html#aucs"><i class="fa fa-check"></i><b>5.1</b> AUCs</a>
+<ul>
+<li class="chapter" data-level="5.1.1" data-path="index-evaluation.html"><a href="index-evaluation.html#introducción-1"><i class="fa fa-check"></i><b>5.1.1</b> Introducción</a></li>
+<li class="chapter" data-level="5.1.2" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-aucs-para-diagnóstico"><i class="fa fa-check"></i><b>5.1.2</b> Cálculo de AUCs para diagnóstico</a></li>
+<li class="chapter" data-level="5.1.3" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-aucs-para-pronóstico"><i class="fa fa-check"></i><b>5.1.3</b> Cálculo de AUCs para pronóstico</a></li>
+</ul></li>
+<li class="chapter" data-level="5.2" data-path="index-evaluation.html"><a href="index-evaluation.html#pauc"><i class="fa fa-check"></i><b>5.2</b> pAUC</a>
+<ul>
+<li class="chapter" data-level="5.2.1" data-path="index-evaluation.html"><a href="index-evaluation.html#introducción-2"><i class="fa fa-check"></i><b>5.2.1</b> Introducción</a></li>
+<li class="chapter" data-level="5.2.2" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-paucs-en-regiones-de-alta-especificidad"><i class="fa fa-check"></i><b>5.2.2</b> Cálculo de pAUCs en regiones de alta especificidad</a></li>
+<li class="chapter" data-level="5.2.3" data-path="index-evaluation.html"><a href="index-evaluation.html#cálculo-de-paucs-en-regiones-de-alta-sensibilidad"><i class="fa fa-check"></i><b>5.2.3</b> Cálculo de pAUCs en regiones de alta sensibilidad</a></li>
+</ul></li>
+<li class="chapter" data-level="5.3" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-derivados-de-pauc"><i class="fa fa-check"></i><b>5.3</b> Índices derivados de pAUC</a>
+<ul>
+<li class="chapter" data-level="5.3.1" data-path="index-evaluation.html"><a href="index-evaluation.html#problemas-del-pauc"><i class="fa fa-check"></i><b>5.3.1</b> Problemas del pAUC</a></li>
+<li class="chapter" data-level="5.3.2" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-para-la-especificidad"><i class="fa fa-check"></i><b>5.3.2</b> Índices para la especificidad</a></li>
+<li class="chapter" data-level="5.3.3" data-path="index-evaluation.html"><a href="index-evaluation.html#índices-para-la-sensibilidad"><i class="fa fa-check"></i><b>5.3.3</b> Índices para la sensibilidad</a></li>
+</ul></li>
+<li class="chapter" data-level="5.4" data-path="index-evaluation.html"><a href="index-evaluation.html#comparación-de-índices"><i class="fa fa-check"></i><b>5.4</b> Comparación de índices</a>
+<ul>
+<li class="chapter" data-level="5.4.1" data-path="index-evaluation.html"><a href="index-evaluation.html#agrupar-por-condiciones"><i class="fa fa-check"></i><b>5.4.1</b> Agrupar por condiciones</a></li>
+<li class="chapter" data-level="5.4.2" data-path="index-evaluation.html"><a href="index-evaluation.html#marcadores-para-diagnóstico"><i class="fa fa-check"></i><b>5.4.2</b> Marcadores para diagnóstico</a></li>
+<li class="chapter" data-level="5.4.3" data-path="index-evaluation.html"><a href="index-evaluation.html#marcadores-para-pronóstico"><i class="fa fa-check"></i><b>5.4.3</b> Marcadores para pronóstico</a></li>
+</ul></li>
+<li class="chapter" data-level="5.5" data-path="index-evaluation.html"><a href="index-evaluation.html#resultados"><i class="fa fa-check"></i><b>5.5</b> Resultados</a>
+<ul>
+<li class="chapter" data-level="5.5.1" data-path="index-evaluation.html"><a href="index-evaluation.html#rendimiento-de-métricas"><i class="fa fa-check"></i><b>5.5.1</b> Rendimiento de métricas</a></li>
+<li class="chapter" data-level="5.5.2" data-path="index-evaluation.html"><a href="index-evaluation.html#relevancia-clínica"><i class="fa fa-check"></i><b>5.5.2</b> Relevancia clínica</a></li>
+</ul></li>
+<li class="chapter" data-level="5.6" data-path="index-evaluation.html"><a href="index-evaluation.html#discusión-y-conclusiones"><i class="fa fa-check"></i><b>5.6</b> Discusión y conclusiones</a></li>
+</ul></li>
+<li class="appendix"><span><b>Apéndice</b></span></li>
+<li class="chapter" data-level="A" data-path="session-info.html"><a href="session-info.html"><i class="fa fa-check"></i><b>A</b> Información de la sesión</a></li>
+<li class="chapter" data-level="" data-path="referencias.html"><a href="referencias.html"><i class="fa fa-check"></i>Referencias</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="count-matrix-generation" class="section level1 hasAnchor" number="3">
+<h1><span class="header-section-number">3</span> Generación de la matriz de cuentas<a href="count-matrix-generation.html#count-matrix-generation" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>En esta sección se trabajará con datos de experimentos de RNA-seq, los cuales han sido extraídos de TCGA, para generar una matriz de cuentas con genes expresados en la enfermedad. Esta matriz será procesada en pasos posteriores para finalmente ser utilizada para evaluar el rendimiento de los diversos índices.</p>
+<div id="descripción-de-los-datos" class="section level2 hasAnchor" number="3.1">
+<h2><span class="header-section-number">3.1</span> Descripción de los datos<a href="count-matrix-generation.html#descripción-de-los-datos" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>A la hora de trabajar con ellos, los datos descargados se encontrarán en el directorio <code>./tcga_data/</code>. En este se podrán encontrar distintos subdirectorios y ficheros que se utilizarán durante el procesamiento de los datos:</p>
+<ul>
+<li><strong>clinical</strong>. Directorio que contiene archivos de metadatos sobre los donantes de tejido. En su interior se encuentra el fichero <code>clinical.tsv</code> con variables de interés para el trabajo.</li>
+<li><strong>gdc_download</strong>. Directorio que contiene, a su vez, distintos subdirectorios, cada uno de ellos con un archivo de lecturas para una muestra de tejido.</li>
+<li><strong>gdc_sample_sheet</strong>. Fichero <code>*.tsv</code> que contiene información sobre los archivos descargados. En su mayoría, contiene identificadores de las muestras y archivos descargados, tipo de experimento, tipo de tumor, etc. Mayoritariamente es de utilidad para relacionar los archivos de metadatos con su respectiva muestra.</li>
+</ul>
+<div id="clinical-preprocessing" class="section level3 hasAnchor" number="3.1.1">
+<h3><span class="header-section-number">3.1.1</span> Preprocesamiento del fichero clinical y gdc_sample_sheet<a href="count-matrix-generation.html#clinical-preprocessing" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Dado que se trabaja con un gran número de ficheros de distinto tipo (datos clínicos, metadatos y datos de experimentos), es posible simplificar la tarea uniendo los ficheros de metadatos (<code>gdc_sample_sheet.tsv</code>) y datos clínicos (<code>clinical.tsv</code>) en un solo.</p>
+<p>Para esta tarea, se ha creado un script en python (<code>tcga_metadata_processing.py</code>)<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a>. En concreto, los pasos realizados por el script son los siguientes:</p>
+<ol style="list-style-type: decimal">
+<li>Lectura de los archivos</li>
+<li>Renombrado de las columnas para usar un estilo común
+<ul>
+<li>Cambio de espacios por <code>_</code></li>
+<li>Uso de minúsculas</li>
+</ul></li>
+<li>Selección de variables de interés y muestras que las describan
+<ul>
+<li>Puntuación de Gleason primaria</li>
+<li>Puntuación de Gleason secundaria</li>
+</ul></li>
+<li>Fusión de archivos utilizando identificadores del paciente
+<ul>
+<li><code>case_id</code></li>
+<li><code>case_submitter_id</code></li>
+</ul></li>
+<li>Transformación de variables
+<ul>
+<li>Transformación a tipo numérico</li>
+<li>Cálculo de nuevas variables
+<ul>
+<li>Puntuación de Gleason<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a></li>
+</ul></li>
+</ul></li>
+</ol>
+<p>Realizados estos pasos, el script genera el archivo <code>file_clinical_sheet.csv</code>, el cual contiene la información necesaria de cada archivo y las variables clínicas de cada paciente del que proviene la muestra. Finalmente, para trabajar con estos archivos, se guardaran las rutas en las que se encuentran.</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="count-matrix-generation.html#cb36-1" tabindex="-1"></a>tcga_data_folder <span class="ot">&lt;-</span> <span class="st">&quot;./tcga_data/gdc_download_20240611_200434.803317&quot;</span></span>
+<span id="cb36-2"><a href="count-matrix-generation.html#cb36-2" tabindex="-1"></a>file_clinical_path <span class="ot">&lt;-</span> <span class="st">&quot;./file_clinical_sheet.csv&quot;</span></span></code></pre></div>
+</div>
+</div>
+<div id="creación-de-matriz-de-cuentas" class="section level2 hasAnchor" number="3.2">
+<h2><span class="header-section-number">3.2</span> Creación de matriz de cuentas<a href="count-matrix-generation.html#creación-de-matriz-de-cuentas" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Como se ha descrito en el apartado anterior, se está trabajando con un gran número de archivos de lecturas. De forma similar a metadatos y datos clínicos, los archivos de lecturas pueden combinarse para facilitar su acceso a ellos, pero para realizar este proceso se ha de entender la estructura que presentan.</p>
+<p>Los archivos de lecturas con los que se está trabajando destinan sus 6 primeras líneas a una serie de métricas y nombres de las variables. Tras ellas, el resto de filas representan un gen con los valores de dichas variables.</p>
+<pre><code>## gene-model: GENCODE v36
+gene_id gene_name   gene_type   unstranded  stranded_first  stranded_second tpm_unstranded  fpkm_unstranded fpkm_uq_unstranded
+N_unmapped          1242436 1242436 1242436         
+N_multimapping          2589737 2589737 2589737         
+N_noFeature         1331220 16814349    16833920            
+N_ambiguous         3211136 753902  752634          
+ENSG00000000003.15  TSPAN6  protein_coding  2743    1379    1364    72.3539 20.8836 20.1004
+ENSG00000000005.6   TNMD    protein_coding  12  5   7   0.9728  0.2808  0.2702
+ENSG00000000419.13  DPM1    protein_coding  745 398 347 73.8513 21.3158 20.5164</code></pre>
+<div id="import-read-files" class="section level3 hasAnchor" number="3.2.1">
+<h3><span class="header-section-number">3.2.1</span> Importar archivos de lecturas<a href="count-matrix-generation.html#import-read-files" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Conociendo la estructura de los archivos es posible planificar una forma de automatizar el proceso para todos ellos. En primer lugar, se deberán de leer y para ello se define la función <code>to_tsv</code>. La función simplemente lee el archivo en la ruta especificada (<code>file_path</code>) omitiendo las 6 primeras lineas y utilizando un tabulador como elemento de separación. Tras ello, re-asigna el nombre de las columnas y devuelve la matriz generada.</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="count-matrix-generation.html#cb38-1" tabindex="-1"></a>to_tsv <span class="ot">&lt;-</span> <span class="cf">function</span>(file_path) {</span>
+<span id="cb38-2"><a href="count-matrix-generation.html#cb38-2" tabindex="-1"></a>    column_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;gene_id&quot;</span>, <span class="st">&quot;gene_name&quot;</span>, <span class="st">&quot;gene_type&quot;</span>, <span class="st">&quot;unstranded&quot;</span>,</span>
+<span id="cb38-3"><a href="count-matrix-generation.html#cb38-3" tabindex="-1"></a>                      <span class="st">&quot;stranded_first&quot;</span>, <span class="st">&quot;stranded_second&quot;</span>, <span class="st">&quot;tpm_unstranded&quot;</span>,</span>
+<span id="cb38-4"><a href="count-matrix-generation.html#cb38-4" tabindex="-1"></a>                      <span class="st">&quot;fpkm_unstranded&quot;</span>,<span class="st">&quot;fpkm_uq_unstranded&quot;</span>)</span>
+<span id="cb38-5"><a href="count-matrix-generation.html#cb38-5" tabindex="-1"></a>    counts <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(file_path, <span class="at">skip =</span> <span class="dv">6</span>, <span class="at">col_names =</span> <span class="cn">FALSE</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb38-6"><a href="count-matrix-generation.html#cb38-6" tabindex="-1"></a>    <span class="fu">colnames</span>(counts) <span class="ot">&lt;-</span> column_names</span>
+<span id="cb38-7"><a href="count-matrix-generation.html#cb38-7" tabindex="-1"></a>    <span class="fu">return</span>(counts)</span>
+<span id="cb38-8"><a href="count-matrix-generation.html#cb38-8" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="process-read-files" class="section level3 hasAnchor" number="3.2.2">
+<h3><span class="header-section-number">3.2.2</span> Selección de variables y renombrado<a href="count-matrix-generation.html#process-read-files" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Una vez es posible leer los conjuntos de datos es posible decidir que variables utilizar. Como se ha observado antes, los archivos de lecturas presentan las siguientes variables:</p>
+<ul>
+<li><strong>gene_id</strong> y <strong>gene_name</strong>. Indican el acrónimo para el gen y su identificador.</li>
+<li><strong>gene_type</strong>. Pequeña descripción del tipo de gen con el que se trata.</li>
+<li><strong>unstranded</strong>. Número de lecturas que se alinean con la región de un gen, sin tener en cuenta la hebra de ADN en la que se encuentra.</li>
+<li><strong>stranded_first</strong> y <strong>stranded_second</strong>. Número de lecturas que se alinean a la región de una hebra de ADN o su complementaria.</li>
+<li><strong>tpm_unstranded</strong>, <strong>fpkm_unstranded</strong> y <strong>fpkm_uq_unstranded</strong>. Diversas normalizaciones de las lecturas en crudo. Respectivamente: transcritos por millón, fragmentos por kilobase por millón de lecturas y cuartil superior de FPKM.</li>
+</ul>
+<p>Al realizar análisis resulta más conveniente trabajar con identificadores frente a nombres, por lo que estos serán seleccionados. Con respecto a las métricas, se plantea la cuestión de si utilizar lecturas <code>unstranded</code> o <code>paired</code> (<code>stranded_first</code> y <code>stranded_second</code>). Habitualmente las segundas se suelen utilizar para experimentos donde es relevante conocer la hebra de la que proviene un transcrito, por ejemplo para el descubrimiento <em>de novo</em> de transcritos o estudio de isoformas <span class="citation">(<a href="referencias.html#ref-best-practices">Conesa et al. 2016</a>)</span>, por este motivo se escogerán las primeras.</p>
+<p>La segunda cuestión que se plantea es la normalización de los datos que se debe usar. Las lecturas normalizadas son de utilidad cuando se compara la expresión de distintos genes, ya que pueden normalizar parámetros que influyen en esta expresión, e.g., longitud del transcrito, tamaño de librería, etc. Puesto que se trabaja con muestras de distintos pacientes, resulta adecuado utilizar la métrica de transcritos por millón (TPM). Esta métrica normaliza las diferencias en la composición de transcritos en el denominador en lugar de simplemente dividir por el número de lecturas en la librería <span class="citation">(<a href="referencias.html#ref-best-practices">Conesa et al. 2016</a>)</span>, como se observa en <a href="count-matrix-generation.html#eq:normalization-metrics">(3.1)</a>.</p>
+<p><span class="math display">\[
+C_g = \text{Número de lecturas alineadas al gen } g \\
+L_g = \text{Longitud del gen } g \\
+N = \text{Número total de genes}
+\]</span></p>
+<p><span class="math display" id="eq:normalization-metrics">\[\begin{equation}
+    FPKM = \dfrac{C_g*10^9}{(\sum^N_{i=1} C_i)L_g} \\
+    TPM = \dfrac{(C_g*10^3/L_g)*10^6}{\sum^N_{i=1}(C_i*10^3/L_i)}
+    \tag{3.1}
+\end{equation}\]</span></p>
+<p>Identificadas las variables a utilizar, es posible definir una función para automatizar el proceso. La función <code>rename_col</code> utilizará como entrada una matriz de cuentas (<code>data</code>) y un nombre que se le provea (<code>sample_id</code>), con ellos renombrará la columna <code>tpm_unstranded</code> al nombre especificado, más adelante se utilizará para indicar el identificador de la muestra. Finalmente, seleccionará dicha columna junto con la que contiene los identificadores de los genes.</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="count-matrix-generation.html#cb39-1" tabindex="-1"></a>rename_col <span class="ot">&lt;-</span> <span class="cf">function</span>(data, sample_id) {</span>
+<span id="cb39-2"><a href="count-matrix-generation.html#cb39-2" tabindex="-1"></a>    count <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb39-3"><a href="count-matrix-generation.html#cb39-3" tabindex="-1"></a>        dplyr<span class="sc">::</span><span class="fu">rename</span>(<span class="st">&quot;{ sample_id }&quot;</span> <span class="sc">:=</span> tpm_unstranded) <span class="sc">%&gt;%</span></span>
+<span id="cb39-4"><a href="count-matrix-generation.html#cb39-4" tabindex="-1"></a>        dplyr<span class="sc">::</span><span class="fu">select</span>(gene_id, <span class="fu">all_of</span>(sample_id))</span>
+<span id="cb39-5"><a href="count-matrix-generation.html#cb39-5" tabindex="-1"></a>    <span class="fu">return</span>(count)</span>
+<span id="cb39-6"><a href="count-matrix-generation.html#cb39-6" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="unión-de-archivos" class="section level3 hasAnchor" number="3.2.3">
+<h3><span class="header-section-number">3.2.3</span> Unión de archivos<a href="count-matrix-generation.html#unión-de-archivos" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Estando automatizada la lectura de archivos y selección de variables de interés, solamente falta automatizar el proceso para unir estos archivos. Para esta tarea, se define <code>join_count_matrices</code>.</p>
+<p>La función tomará como entrada 2 matrices de cuentas (<code>count_matrix_a</code> y <code>count_matrix_b</code>) y utilizará los identificadores de los genes (<code>gene_id</code>) para realizar su unión. De esta forma, si hay genes identificados en la segunda matriz que no están en la primera, se añadirá una nueva fila para dicho gen. En caso de que un gen exista en la primera matriz, las cuentas se colocarán en la fila adecuada. De esta forma la función devolverá una matriz donde cada fila se corresponderá a un gen concreto, mientras que cada columna a una muestra.</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="count-matrix-generation.html#cb40-1" tabindex="-1"></a>join_count_matrices <span class="ot">&lt;-</span> <span class="cf">function</span>(count_matrix_a, count_matrix_b) {</span>
+<span id="cb40-2"><a href="count-matrix-generation.html#cb40-2" tabindex="-1"></a>    <span class="fu">full_join</span>(</span>
+<span id="cb40-3"><a href="count-matrix-generation.html#cb40-3" tabindex="-1"></a>        count_matrix_a,</span>
+<span id="cb40-4"><a href="count-matrix-generation.html#cb40-4" tabindex="-1"></a>        count_matrix_b,</span>
+<span id="cb40-5"><a href="count-matrix-generation.html#cb40-5" tabindex="-1"></a>        <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;gene_id&quot;</span>), <span class="at">keep =</span> <span class="cn">FALSE</span></span>
+<span id="cb40-6"><a href="count-matrix-generation.html#cb40-6" tabindex="-1"></a>    )</span>
+<span id="cb40-7"><a href="count-matrix-generation.html#cb40-7" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="construcción-de-la-matriz-de-cuentas" class="section level3 hasAnchor" number="3.2.4">
+<h3><span class="header-section-number">3.2.4</span> Construcción de la matriz de cuentas<a href="count-matrix-generation.html#construcción-de-la-matriz-de-cuentas" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Creadas las funciones para el flujo de trabajo, simplemente basta con poder aplicarlas a cada uno de los archivos de lecturas. Para que la tarea sea más sencilla, se realizará en primer lugar el preprocesado de los archivos y tras ello su unión.</p>
+<p>En primer lugar se define la función <code>transform_counts</code>, la cual simplemente aplica las funciones <code>to_tsv</code> y <code>rename_col</code>, definidas en las secciones <a href="count-matrix-generation.html#import-read-files">3.2.1</a> y <a href="count-matrix-generation.html#process-read-files">3.2.2</a>.</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="count-matrix-generation.html#cb41-1" tabindex="-1"></a>transform_counts <span class="ot">&lt;-</span> <span class="cf">function</span>(file_path, sample_id) {</span>
+<span id="cb41-2"><a href="count-matrix-generation.html#cb41-2" tabindex="-1"></a>    count_matrix <span class="ot">&lt;-</span> <span class="fu">to_tsv</span>(file_path) <span class="sc">%&gt;%</span></span>
+<span id="cb41-3"><a href="count-matrix-generation.html#cb41-3" tabindex="-1"></a>        <span class="fu">rename_col</span>(sample_id)</span>
+<span id="cb41-4"><a href="count-matrix-generation.html#cb41-4" tabindex="-1"></a>    <span class="fu">return</span>(count_matrix)</span>
+<span id="cb41-5"><a href="count-matrix-generation.html#cb41-5" tabindex="-1"></a>}</span></code></pre></div>
+<p>La función toma como entrada la ruta de un archivo de lecturas y un identificador de muestra, por lo que para aplicar esta función a todos los archivos, se requerirá iterar sobre cada una de las rutas y sus identificadores. Esta información, está disponible en el archivo <code>file_clinical_sheet.csv</code> previamente generado (sección <a href="count-matrix-generation.html#clinical-preprocessing">3.1.1</a>), por lo que se importará en primer lugar.</p>
+<p>Tras ello utilizando la función <code>stringr::str_c</code> es posible concatenar la ruta del directorio (<code>tcga_data_folder</code>) con el nombre de cada uno de los archivos (<code>file_id</code> y <code>file_name</code>) obteniendo así la ruta completa de cada uno de ellos. Estas rutas, se guardarán en una nueva columna (<code>full_path</code>) creada utilizando la función <code>dplyr::mutate</code>.</p>
+<p>Teniendo las rutas completas e identificadores, se usará la función <code>purrr::map2</code> para iterar simultáneamente sobre 2 inputs y pasarlos en una función. En este caso, se aplicará sobre las rutas (<code>file_clinical$full_path</code>) y los identificadores de las muestras (<code>file_clinical$sample_id</code>) para pasarlos a la función <code>transform_counts</code>. De esta forma se obtendrá una lista de archivos de lecturas procesados.</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="count-matrix-generation.html#cb42-1" tabindex="-1"></a>file_clinical <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">read_csv</span>(file_clinical_path, <span class="at">col_names =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb42-2"><a href="count-matrix-generation.html#cb42-2" tabindex="-1"></a>file_clinical <span class="ot">&lt;-</span> file_clinical <span class="sc">%&gt;%</span></span>
+<span id="cb42-3"><a href="count-matrix-generation.html#cb42-3" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb42-4"><a href="count-matrix-generation.html#cb42-4" tabindex="-1"></a>        <span class="at">full_path =</span> <span class="fu">str_c</span>(tcga_data_folder, file_id, file_name, <span class="at">sep =</span> <span class="st">&quot;/&quot;</span>)</span>
+<span id="cb42-5"><a href="count-matrix-generation.html#cb42-5" tabindex="-1"></a>    )</span>
+<span id="cb42-6"><a href="count-matrix-generation.html#cb42-6" tabindex="-1"></a></span>
+<span id="cb42-7"><a href="count-matrix-generation.html#cb42-7" tabindex="-1"></a>count_matrices <span class="ot">&lt;-</span> <span class="fu">map2</span>(</span>
+<span id="cb42-8"><a href="count-matrix-generation.html#cb42-8" tabindex="-1"></a>    file_clinical<span class="sc">$</span>full_path,</span>
+<span id="cb42-9"><a href="count-matrix-generation.html#cb42-9" tabindex="-1"></a>    file_clinical<span class="sc">$</span>sample_id,</span>
+<span id="cb42-10"><a href="count-matrix-generation.html#cb42-10" tabindex="-1"></a>    transform_counts,</span>
+<span id="cb42-11"><a href="count-matrix-generation.html#cb42-11" tabindex="-1"></a>    <span class="at">.progress =</span> T</span>
+<span id="cb42-12"><a href="count-matrix-generation.html#cb42-12" tabindex="-1"></a>)</span></code></pre></div>
+<p>Preprocesados los archivos de lecturas, el siguiente pasó será realizar la unión de todos archivos. Para ello se utilizará la función <code>purrr:reduce</code> la cual combina los elementos de un vector en un valor único. De forma detallada, <code>reduce</code> actúa de la siguiente forma:</p>
+<ol style="list-style-type: decimal">
+<li>Toma una función como input que es aplicada a los 2 primeros elementos de un vector.</li>
+<li>La función se aplica al nuevo resultado y al siguiente elemento del vector.</li>
+<li>El paso anterior se repite hasta que no queden más elementos en el vector.</li>
+</ol>
+<p>De esta forma, cuando se aplica <code>reduce</code> con la función <code>join_count_matrices</code>, se realizarán uniones de los ficheros de forma consecutiva hasta obtener una única matriz de cuentas.</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="count-matrix-generation.html#cb43-1" tabindex="-1"></a>merged_matrices <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(purrr<span class="sc">::</span><span class="fu">reduce</span>(count_matrices, join_count_matrices))</span>
+<span id="cb43-2"><a href="count-matrix-generation.html#cb43-2" tabindex="-1"></a><span class="fu">rownames</span>(merged_matrices) <span class="ot">&lt;-</span> merged_matrices<span class="sc">$</span>gene_id</span></code></pre></div>
+</div>
+</div>
+<div id="procesado-de-la-matriz-de-cuentas" class="section level2 hasAnchor" number="3.3">
+<h2><span class="header-section-number">3.3</span> Procesado de la matriz de cuentas<a href="count-matrix-generation.html#procesado-de-la-matriz-de-cuentas" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Aunque en el paso anterior se ha generado una matriz de cuentas, se debe tener en cuenta los posteriores análisis a realizar. En ellos, se deberán realizar una serie de cálculos sobre la matriz, por ello, será necesario que esta cumpla con algunas condiciones:</p>
+<ol style="list-style-type: decimal">
+<li>Los genes o marcadores deberán encontrarse en las columnas de la matriz, dado que serán las variables de estudio.</li>
+<li>La matriz debe de contener una variable binaria que represente la variable a predecir e.g. si la muestra proviene de un paciente enfermo o no.</li>
+</ol>
+<div id="pivotado-de-la-matriz" class="section level3 hasAnchor" number="3.3.1">
+<h3><span class="header-section-number">3.3.1</span> Pivotado de la matriz<a href="count-matrix-generation.html#pivotado-de-la-matriz" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Como se ha descrito al comienzo de la sección, la estructura de los datos es relevante para realizar los análisis aguas abajo. Por este motivo, en esta sección se realizará una reestructuración de los mismos utilizando las funciones <code>tidyr::pivot_longer</code> y <code>tidyr::pivot_wider</code>.</p>
+<p>La primera, compactará todas la columnas especificadas (<code>cols = !gene_id</code>, es decir todas menos <code>gene_id</code>) en una nueva columna (<code>names_to = "sample"</code>) y su valores en otra especificada (<code>values_to = "counts"</code>). Compactada la información de las muestras, podemos utilizar la segunda para crear nuevas columnas con el nombre de los genes (<code>names_from = gene_id</code>) que usen los valores previamente guardados (<code>values_from = counts</code>).</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="count-matrix-generation.html#cb44-1" tabindex="-1"></a>tcga_data <span class="ot">&lt;-</span> merged_matrices <span class="sc">%&gt;%</span></span>
+<span id="cb44-2"><a href="count-matrix-generation.html#cb44-2" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(</span>
+<span id="cb44-3"><a href="count-matrix-generation.html#cb44-3" tabindex="-1"></a>        <span class="at">cols =</span> <span class="sc">!</span>gene_id,</span>
+<span id="cb44-4"><a href="count-matrix-generation.html#cb44-4" tabindex="-1"></a>        <span class="at">names_to =</span> <span class="st">&quot;sample&quot;</span>,</span>
+<span id="cb44-5"><a href="count-matrix-generation.html#cb44-5" tabindex="-1"></a>        <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span></span>
+<span id="cb44-6"><a href="count-matrix-generation.html#cb44-6" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb44-7"><a href="count-matrix-generation.html#cb44-7" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(</span>
+<span id="cb44-8"><a href="count-matrix-generation.html#cb44-8" tabindex="-1"></a>        <span class="at">names_from =</span> gene_id,</span>
+<span id="cb44-9"><a href="count-matrix-generation.html#cb44-9" tabindex="-1"></a>        <span class="at">values_from =</span> counts</span>
+<span id="cb44-10"><a href="count-matrix-generation.html#cb44-10" tabindex="-1"></a>    )</span></code></pre></div>
+<p>De esta forma, se logra que los genes se correspondan con las columnas y cada entrada con la muestra de un paciente.</p>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="26%" />
+<col width="24%" />
+<col width="26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">sample</th>
+<th align="right">ENSG00000000003.15</th>
+<th align="right">ENSG00000000005.6</th>
+<th align="right">ENSG00000000419.13</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">TCGA-KK-A8IG-01A</td>
+<td align="right">29.0736</td>
+<td align="right">0.2262</td>
+<td align="right">76.9529</td>
+</tr>
+<tr class="even">
+<td align="left">TCGA-G9-A9S7-01A</td>
+<td align="right">50.6646</td>
+<td align="right">0.0459</td>
+<td align="right">106.8449</td>
+</tr>
+<tr class="odd">
+<td align="left">TCGA-EJ-7789-11A</td>
+<td align="right">111.8758</td>
+<td align="right">1.2765</td>
+<td align="right">114.1114</td>
+</tr>
+<tr class="even">
+<td align="left">TCGA-YL-A8SA-01A</td>
+<td align="right">51.1902</td>
+<td align="right">0.0597</td>
+<td align="right">90.8608</td>
+</tr>
+<tr class="odd">
+<td align="left">TCGA-XK-AAJ3-01A</td>
+<td align="right">36.0334</td>
+<td align="right">0.0000</td>
+<td align="right">63.9224</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="cálculo-de-gold-standards" class="section level3 hasAnchor" number="3.3.2">
+<h3><span class="header-section-number">3.3.2</span> Cálculo de Gold Standards<a href="count-matrix-generation.html#cálculo-de-gold-standards" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Una vez se ha reestructurado la matriz es posible incluir las variables a predecir, que se usarán en posteriores análisis. Estas variables, representarán patrones que suceden en la realidad o también conocidos como “Gold Standards”. En este caso los patrones que se incluirán en los datos serán variables binarias que, posteriormente, permitirán evaluar los genes seleccionados como predictores.</p>
+<p>Estas variables se establecerán a partir de la puntuación de Gleason, por lo que, el primer paso será incluirla en la matriz. Dado que el orden de las muestras es el mismo en la matriz que en la tabla de metadatos, es posible incluir la columna sin mayor dificultad.</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="count-matrix-generation.html#cb45-1" tabindex="-1"></a>tcga_data[[<span class="st">&quot;gleason_score&quot;</span>]] <span class="ot">&lt;-</span> file_clinical[[<span class="st">&quot;gleason_score&quot;</span>]]</span></code></pre></div>
+<p>Incluidas las puntuaciones de Gleason es posible generar las demás variables. En primer lugar se agruparán las muestras en función de la malignidad del tumor, es decir en función de su puntuación de Gleason:</p>
+<ul>
+<li><strong>Puntuación de 5 o menor</strong>. Se podría considerar un cáncer de bajo grado. En el conjunto de datos utilizado, todos los tejido en este rango serán tejidos sanos (e.g. hiperplásias)</li>
+<li><strong>Puntuación de 6 o 7</strong>. Cáncer de grado medio. En el conjunto de datos serán referidos como casos de malignidad baja.</li>
+<li><strong>Puntuación de 8 o mayor</strong>. Cáncer de grado alto. En el conjunto de datos serán referidos como casos de malignidad alta.</li>
+</ul>
+<p>Con la función <code>dplyr::mutate</code> se creará la variable <code>malignancy</code> que ,utilizando la función <code>dplyr::case_when</code>, clasificará las distintas muestras en <code>Normal</code>, <code>Low Malignancy</code> y <code>High Malignancy</code> según los criterios establecidos.</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="count-matrix-generation.html#cb46-1" tabindex="-1"></a>tcga_data <span class="ot">&lt;-</span> tcga_data <span class="sc">%&gt;%</span></span>
+<span id="cb46-2"><a href="count-matrix-generation.html#cb46-2" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb46-3"><a href="count-matrix-generation.html#cb46-3" tabindex="-1"></a>        <span class="at">malignancy =</span> <span class="fu">case_when</span>(</span>
+<span id="cb46-4"><a href="count-matrix-generation.html#cb46-4" tabindex="-1"></a>            gleason_score <span class="sc">&gt;=</span> <span class="dv">8</span> <span class="sc">~</span> <span class="st">&quot;High Malignancy&quot;</span>,</span>
+<span id="cb46-5"><a href="count-matrix-generation.html#cb46-5" tabindex="-1"></a>            gleason_score <span class="sc">==</span> <span class="dv">6</span> <span class="sc">|</span> gleason_score <span class="sc">==</span> <span class="dv">7</span> <span class="sc">~</span> <span class="st">&quot;Low Malignancy&quot;</span>,</span>
+<span id="cb46-6"><a href="count-matrix-generation.html#cb46-6" tabindex="-1"></a>            gleason_score <span class="sc">&lt;=</span> <span class="dv">5</span> <span class="sc">~</span> <span class="st">&quot;Normal&quot;</span></span>
+<span id="cb46-7"><a href="count-matrix-generation.html#cb46-7" tabindex="-1"></a>        )</span>
+<span id="cb46-8"><a href="count-matrix-generation.html#cb46-8" tabindex="-1"></a>    )</span></code></pre></div>
+<p>Es importante considerar que en pasos posteriores se deberá trabajar con variables binarias, por ello que se requerirá realizar transformaciones adicionales. En primer lugar, se buscará trabajar con marcadores de diagnóstico. Los marcadores de este tipo deberían ser capaces de diferenciar o clasificar entre pacientes sanos y enfermos, por ello, se utilizará la información de la variable <code>malignancy</code> para generar una variable que represente estas condiciones. Esta variable será <code>disease</code> que, utilizando la función <code>forcats::fct_collapse</code>, compactará los valores de <code>malignancy</code> de <code>High Malignancy</code> y <code>Low Malignancy</code> en 1 (enfermos), y valores de <code>Normal</code> en 0 (sanos).</p>
+<div class="sourceCode" id="cb47"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb47-1"><a href="count-matrix-generation.html#cb47-1" tabindex="-1"></a>tcga_data <span class="ot">&lt;-</span> tcga_data <span class="sc">%&gt;%</span></span>
+<span id="cb47-2"><a href="count-matrix-generation.html#cb47-2" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb47-3"><a href="count-matrix-generation.html#cb47-3" tabindex="-1"></a>        <span class="at">disease =</span> <span class="fu">fct_collapse</span>(</span>
+<span id="cb47-4"><a href="count-matrix-generation.html#cb47-4" tabindex="-1"></a>            malignancy,</span>
+<span id="cb47-5"><a href="count-matrix-generation.html#cb47-5" tabindex="-1"></a>            <span class="st">&quot;0&quot;</span> <span class="ot">=</span> <span class="st">&quot;Normal&quot;</span>, </span>
+<span id="cb47-6"><a href="count-matrix-generation.html#cb47-6" tabindex="-1"></a>            <span class="st">&quot;1&quot;</span> <span class="ot">=</span> <span class="fu">c</span>(<span class="st">&quot;High Malignancy&quot;</span>, <span class="st">&quot;Low Malignancy&quot;</span>)</span>
+<span id="cb47-7"><a href="count-matrix-generation.html#cb47-7" tabindex="-1"></a>        )</span>
+<span id="cb47-8"><a href="count-matrix-generation.html#cb47-8" tabindex="-1"></a>    )</span></code></pre></div>
+<p>En segundo lugar, se tratará de buscar marcadores de pronóstico o estratificación de riesgo. Los marcadores de este tipo deberían ser capaces de distinguir entre pacientes donde la enfermedad es menos probable que progrese frente a pacientes donde es más probable que lo haga, es decir un cáncer de crecimiento lento y menos agresivo frente a uno de crecimiento rápido y mayor agresividad. En este caso, se realizará un procedimiento similar creando la variable <code>prognostic</code>, donde 0 se corresponderá con valores de <code>Low Malignancy</code> y de 1 con <code>High Malignancy</code><a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a>.</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb48-1"><a href="count-matrix-generation.html#cb48-1" tabindex="-1"></a>tcga_data <span class="ot">&lt;-</span> tcga_data <span class="sc">%&gt;%</span></span>
+<span id="cb48-2"><a href="count-matrix-generation.html#cb48-2" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb48-3"><a href="count-matrix-generation.html#cb48-3" tabindex="-1"></a>        <span class="at">prognostic =</span> <span class="fu">fct_collapse</span>(</span>
+<span id="cb48-4"><a href="count-matrix-generation.html#cb48-4" tabindex="-1"></a>            malignancy,</span>
+<span id="cb48-5"><a href="count-matrix-generation.html#cb48-5" tabindex="-1"></a>            <span class="st">&quot;0&quot;</span> <span class="ot">=</span> <span class="st">&quot;Low Malignancy&quot;</span>,</span>
+<span id="cb48-6"><a href="count-matrix-generation.html#cb48-6" tabindex="-1"></a>            <span class="st">&quot;1&quot;</span> <span class="ot">=</span> <span class="st">&quot;High Malignancy&quot;</span></span>
+<span id="cb48-7"><a href="count-matrix-generation.html#cb48-7" tabindex="-1"></a>        )</span>
+<span id="cb48-8"><a href="count-matrix-generation.html#cb48-8" tabindex="-1"></a>    )</span></code></pre></div>
+<p>Una vez generada la matriz con los genes y variables a predecir, el conjunto de datos está preparado para realizar los análisis pertinentes. Sin embargo, dado que anteriormente se han seleccionado marcadores relevantes de la enfermedad (sección <a href="cancer-cells-selection.html#cancer-cells-selection">2</a>), será posible utilizarlos para filtrar el conjunto de datos, de esta forma se logra:</p>
+<ul>
+<li><strong>Aumento de precisión</strong>. Los experimentos de RNA-seq muestran perfiles transcripcionales promedios de todas las células de la muestra. Esto incluye células epiteliales, fibroblastos, células musculares, etc. Por este motivo, realizar un filtrado con los marcadores seleccionados en experimentos de scRNA-seq, permite seleccionar solamente aquellas células de interés para la enfermedad.</li>
+<li><strong>Reducción del tamaño del conjunto de datos</strong>. Los análisis aguas abajo son exigentes a nivel computacional, por lo que una reducción del conjunto de datos acelera en gran medida el proceso.</li>
+</ul>
+<p>Así, en pasos posteriores, se realizará este filtrado usando los datos provenientes de experimentos de scRNA-seq, para finalmente realizar el análisis de los marcadores seleccionados de forma más óptima.</p>
+
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="2">
+<li id="fn2"><p>El uso de un script de Python para esta tarea ha sido completamente arbitrario. Para algunos de los pasos este lenguaje utiliza una sintaxis más sencilla, sin embargo, estos también podrían haberse realizado con R.<a href="count-matrix-generation.html#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>La puntuación de Gleason se obtiene a través de la suma de la puntuación primaria y la secundaria:
+<span class="math display">\[\text{P. Gleason} = \text{P. Gleason Primaria} + \text{P. Gleason Secundaria}\]</span><a href="count-matrix-generation.html#fnref3" class="footnote-back">↩︎</a></p></li>
+<li id="fn4"><p>En la creación de la variable <code>prognostic</code> solamente se deben considerar pacientes enfermos. Sin embargo, debido a que los datos provienen de la variable <code>malignancy</code> es posible encontrar encontrar casos de tejido sano, de esta forma la variable podrá tomar los valores: <code>Normal</code>, <code>0</code> y <code>1</code>). Para mantener los datos en una matriz común, la variable <code>prognostic</code>se mantendrá en esta forma, pero a la hora de realizar los cálculos las entradas con valor <code>Normal</code> serán filtradas.<a href="count-matrix-generation.html#fnref4" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="cancer-cells-selection.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="count-matrix-filtering.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

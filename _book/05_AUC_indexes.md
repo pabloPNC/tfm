@@ -2,23 +2,13 @@
 
 # Evaluación de índices {#index-evaluation}
 
-```{r Importar librerías, warning=FALSE, include=FALSE}
-library(pROC)
-library(purrr)
-library(dplyr)
-library(forcats)
-library(tibble)
-library(ROCpAI)
-library(ROCnGO)
-```
+
 
 En esta sección del trabajo se estudiarán los distintos índices aplicados a los marcadores de la sección anterior. En primer lugar, se describirá el fundamento teórico y limitaciones de cada uno de ellos. Tras ello, estos índices serán aplicados al conjunto de datos utilizando las distintas variables respuesta. Finalmente, se evaluará su capacidad para seleccionar los clasificadores de mayor rendimiento, además de contrastar sus resultados con marcadores de utilidad aplicados actualmente en la práctica.
 
 Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cáncer.
 
-```{r Importar datos, include=FALSE}
-roc_data <- readRDS("./rds_objects/04_filtered_tcga_data.rds")
-```
+
 
 ## AUCs
 
@@ -36,20 +26,31 @@ Comprendido el fundamento teórico es posible realizar los cálculos. Para ello,
 
 En el conjunto de datos con el que se trabaja, la variable respuesta toma valores de `0` y `1` para indicar los casos con la condición de estudio y sin ella. Sin embargo, si se comprueba el orden de estos valores, se observa que está invertido.
 
-```{r disease-order}
+
+```r
 levels(roc_data$disease)
+```
+
+```
+## [1] "1" "0"
 ```
 
 Por este motivo, antes de realizar el cálculo de los $AUC$s, se reorganizarán los valores de `disease`. Para esta tarea se utilizará la función `forcats::fct_relevel`, la cual tomará como entrada un `factor` y un vector indicando el nuevo orden para sus clases.
 
-```{r Reorganización del factor}
+
+```r
 roc_data$disease <- fct_relevel(roc_data$disease, c("0", "1"))
 levels(roc_data$disease)
 ```
 
+```
+## [1] "0" "1"
+```
+
 Ordenadas las clases en la variable respuesta, es posible aplicar la función `pROC::auc`. Dado que se buscará aplicar la métrica a todos los genes, se obtendrá un conjunto de datos temporal que contendrá solo los genes (`diagnostic_dataset`) y se utilizará la función `purrr::map_dbl` sobre este. La función iterará sobre las columnas (marcadores) y aplicará la función `pROC::auc` sobre cada una de ellas utilizando la variable `disease` como respuesta.
 
-```{r Cálculo de AUCs para diagnóstico, cache=TRUE, results='hide', message=FALSE}
+
+```r
 diagnostic_dataset <- roc_data %>% select(
     -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
 )
@@ -70,7 +71,8 @@ De forma similar a la sección anterior, es posible calcular las $AUC$s pero est
 
 Para realizar este primer filtrado, se generará un conjunto de datos temporal con los pacientes enfermos (`disease == 1`). A continuación, se reorganizarán las clases de la variable (`prognostic`) y eliminarán las que no son utilizadas (`Normal`, aquellas correspondientes a pacientes sanos).
 
-```{r Filtrado de casos enfermos}
+
+```r
 disease <- roc_data %>% filter(disease == 1)
 disease[["prognostic"]] <- fct_drop(disease[["prognostic"]])
 disease[["prognostic"]] <- fct_relevel(disease[["prognostic"]], c("0", "1"))
@@ -78,7 +80,8 @@ disease[["prognostic"]] <- fct_relevel(disease[["prognostic"]], c("0", "1"))
 
 Realizado el filtrado, se realizará un procedimiento similar para calcular las $AUC$s en este nuevo contexto.
 
-```{r Cálculo de AUCs para pronóstico, cache=TRUE, warning=FALSE, message=FALSE}
+
+```r
 prognostic_dataset <- disease %>% select(
     -c("sample", "gleason_score", "malignancy", "disease", "prognostic")
 )
@@ -109,7 +112,8 @@ Un diagnóstico temprano de ciertas enfermedades, como es el caso del cáncer de
 
 Con el fin de trabajar en estas condiciones se seleccionarán arbitrariamente rangos de $1 - FPR$ contenidos en un intervalo de $(0.9, 1)$. Para realizar estos cálculos se usará de nuevo la función `pROC::auc` indicando que se trabajará sobre el rango indicado (`partial.auc = c(0.9, 1)`) y sobre la especificidad (`partial.auc.focus = "spec"`).
 
-```{r Cálculo de pAUC en especificidad para diagnóstico, cache=TRUE, message=FALSE}
+
+```r
 pauc_sp_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -124,7 +128,8 @@ pauc_sp_diagnostic <- map_dbl(
 
 De forma similar, determinar el pronóstico de un paciente es relevante para seleccionar un tratamiento más o menos agresivo. Cometer falsos positivos en este contexto implica consecuencias graves para el paciente, por este motivo, también se considerarán condiciones de alta especificidad para determinar un pronóstico.
 
-```{r Cálculo de pAUC en especificidad para pronóstico, cache=TRUE, message=FALSE}
+
+```r
 pauc_sp_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
@@ -143,7 +148,8 @@ De forma similar, es posible trasladar el caso a condiciones de alta sensibilida
 
 De este modo, para calcular los índices, simplemente se realizará el procedimiento anterior pero esta vez indicando que se utilizará la sensibilidad (`partial.auc.focus = "sens"`).
 
-```{r Cálculo de pAUC en sensibilidad para pronóstico, cache=TRUE, message=FALSE}
+
+```r
 pauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
@@ -158,7 +164,8 @@ pauc_sn_prognostic <- map_dbl(
 
 Finalmente, desde el punto de vista clínico también es relevante un contexto de alta sensibilidad para el diagnóstico de la enfermedad. Como se ha explicado antes, un diagnóstico temprano puede ser relevante para evitar la muerte del paciente. Por este motivo, también debería considerarse esta métrica para realizar los cálculos.
 
-```{r Cálculo de pAUC en sensibilidad para diagnóstico, cache=TRUE, message=FALSE}
+
+```r
 pauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -177,7 +184,8 @@ pauc_sn_diagnostic <- map_dbl(
 
 Aunque el $pAUC$ puede ser útil para trabajar en regiones de interés en la curva $ROC$, no está libre de fallas. Este índice ha sido cuestionado por su falta de interpretabilidad, ya que aunque algunos marcadores presentan valores altos de $AUC$ y rinden bien en las zonas seleccionadas, presentan valores de $pAUC$ muy cercanos a 0. Esto puede comprobarse, por ejemplo, con los 10 marcadores de mayor $AUC$ en condiciones de alta especificidad:
 
-```{r Comparación entre AUCs y pAUCs, eval=FALSE}
+
+```r
 enframe(auc_diagnostic) %>%
     arrange(desc(value)) %>%
     left_join(
@@ -190,22 +198,67 @@ enframe(auc_diagnostic) %>%
     ) %>%
     .[0:10,]
 ```
-```{r auc-pauc-comparison, echo=FALSE}
-kableExtra::kbl(
-    enframe(auc_diagnostic) %>%
-        arrange(desc(value)) %>%
-        left_join(
-            enframe(pauc_sp_diagnostic),
-            join_by(name == name)
-        ) %>%
-        dplyr::rename(
-            auc = value.x,
-            pauc = value.y
-        ) %>%
-        .[0:10,]
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> name </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000105707 </td>
+   <td style="text-align:right;"> 0.9436868 </td>
+   <td style="text-align:right;"> 0.0746093 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000181378 </td>
+   <td style="text-align:right;"> 0.9252605 </td>
+   <td style="text-align:right;"> 0.0749387 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000124839 </td>
+   <td style="text-align:right;"> 0.9229620 </td>
+   <td style="text-align:right;"> 0.0680432 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000006625 </td>
+   <td style="text-align:right;"> 0.9207784 </td>
+   <td style="text-align:right;"> 0.0553402 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000242110 </td>
+   <td style="text-align:right;"> 0.9157217 </td>
+   <td style="text-align:right;"> 0.0672311 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000159263 </td>
+   <td style="text-align:right;"> 0.9103203 </td>
+   <td style="text-align:right;"> 0.0528042 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000138028 </td>
+   <td style="text-align:right;"> 0.9091710 </td>
+   <td style="text-align:right;"> 0.0505440 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000173638 </td>
+   <td style="text-align:right;"> 0.9071407 </td>
+   <td style="text-align:right;"> 0.0513178 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000245750 </td>
+   <td style="text-align:right;"> 0.9061063 </td>
+   <td style="text-align:right;"> 0.0549264 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000176058 </td>
+   <td style="text-align:right;"> 0.9044591 </td>
+   <td style="text-align:right;"> 0.0604658 </td>
+  </tr>
+</tbody>
+</table>
 
 
 Como se observa, los $pAUC$ no superan el $0.5$; valor límite en el $AUC$ con el que se considera que un clasificador rinde igual que uno completamente aleatorio. Además, en ciertos escenarios, el $pAUC$ no puede distinguir que clasificador presentaría un mejor rendimiento. Por ejemplo, cuando se comparan clasificadores con $pAUC$s iguales y curvas $ROC$ que se cruzan [@pauc-comparison].
@@ -238,7 +291,8 @@ A pesar de la mejora en su interpretabilidad, la métrica todavía presenta algu
 
 Conociendo las ventajas y limitaciones de la métrica, esta se aplicará al conjunto de datos para contrastarla con otras más adelante. Para ello se utilizará la función `pROC::auc` indicando el argumento `partial.auc.correct = TRUE`, que aplicará la transformación descrita por McClish. Además, se indicará el parámetro `allow.invalid.partial.auc.correct = FALSE`, de esta forma, la función no calculará el índice cuando la curva se encuentra descrita por debajo del área mínima, puesto que el límite inferior no estará bien definido, devolviendo en su lugar un `NA`.
 
-```{r Cálculo de SpAUC para diagnóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 spauc_sp_diagnostic <- map_dbl(
     diagnostic_dataset,
     auc,
@@ -253,7 +307,8 @@ spauc_sp_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de SpAUC para pronóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 spauc_sp_prognostic <- map_dbl(
     prognostic_dataset,
     auc,
@@ -300,7 +355,8 @@ De forma similar al $SpAUC$, el $TpAUC$ se aplicará en el conjunto de datos par
 
 La función `tpAUC` requiere de indicar la región de la curva en la que aplicar los cálculos (`low.value` y `up.value`) y el conjunto de datos. Este último requerirá que la primera columna se corresponda con la variable respuesta, mientras que el resto con los demás predictores.
 
-```{r Cálculo de TpAUC para diagnóstico, cache=TRUE}
+
+```r
 tpauc_sp_diagnostic_assay <- tpAUC(
     dataset = diagnostic_dataset %>% mutate(
         disease = roc_data$disease,
@@ -312,7 +368,8 @@ tpauc_sp_diagnostic_assay <- tpAUC(
 )
 ```
 
-```{r Cálculo de TpAUC para pronóstico, cache=TRUE}
+
+```r
 tpauc_sp_prognostic_assay <- tpAUC(
     dataset = prognostic_dataset %>% mutate(
         prognostic = disease$prognostic,
@@ -326,7 +383,8 @@ tpauc_sp_prognostic_assay <- tpAUC(
 
 La salida de la función devolverá un objeto con diversas métricas. Utilizando la función `assay` se podrán extraer los $TpAUC$ almacenados en `St_pAUC`. Finalmente, los identificadores de cada clasificador se asignarán a cada uno de los resultados.
 
-```{r Transformación en vector}
+
+```r
 tpauc_sp_diagnostic <- as.numeric(assay(tpauc_sp_diagnostic_assay)$St_pAUC)
 tpauc_sp_prognostic <- as.numeric(assay(tpauc_sp_prognostic_assay)$St_pAUC)
 names(tpauc_sp_diagnostic) <- colnames(diagnostic_dataset)
@@ -367,7 +425,8 @@ Debido a esta transformación, el $NpAUC$ se puede interpretar como el valor pro
 
 Igual que en los casos anteriores, el $NpAUC$ se aplicará al conjunto de datos para contrastarlo más adelante. El índice no está implementado en ningún paquete conocido, de modo que para aplicarlo de forma sencilla se ha incluido en un paquete propio, `ROCnGO`. Este paquete cuenta con la función `ROCnGO::np_auc` que permite calcular el índice con un procedimiento similar a los anteriores.
 
-```{r Cálculo de NpAUC para diagnóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 npauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     \(gene) {
@@ -381,7 +440,8 @@ npauc_sn_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de NpAUC para pronóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 npauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
@@ -430,7 +490,8 @@ Conociendo todos los casos posibles, y aplicando la transformación descrita por
 
 De forma similar a los casos anteriores, el $FpAUC$ se calculará para contrastarlo con el resto. Al igual que el $NpAUC$, este índice no se encuentra implementado en ningún paquete conocido, por lo que para facilitar su aplicación se ha implementado en el paquete `ROCnGO`. Para realizar los cálculos sobre el conjunto de datos, se utilizará la función `ROCnGO::fp_auc`:
 
-```{r Cálculo de FpAUC para diagnóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 fpauc_sn_diagnostic <- map_dbl(
     diagnostic_dataset,
     \(gene) {
@@ -444,7 +505,8 @@ fpauc_sn_diagnostic <- map_dbl(
 )
 ```
 
-```{r Cálculo de FpAUC para pronóstico, warning=FALSE, cache=TRUE, message=FALSE}
+
+```r
 fpauc_sn_prognostic <- map_dbl(
     prognostic_dataset,
     \(gene) {
@@ -466,7 +528,8 @@ Hasta ahora, para identificar posibles marcadores de diagnóstico y pronóstico 
 
 Para facilitar su acceso, los resultados se agruparán en función de las condiciones que se han medido (alta sensibilidad o especificidad) y su finalidad (diagnóstico o pronóstico).
 
-```{r Índices de sensiblidad para diagnóstico}
+
+```r
 indexes_sn_diagnostic <- tibble(
     identifier = names(auc_diagnostic),
     auc = auc_diagnostic,
@@ -476,7 +539,8 @@ indexes_sn_diagnostic <- tibble(
 )
 ```
 
-```{r Índices de sensiblidad para pronóstico}
+
+```r
 indexes_sn_prognostic <- tibble(
     identifier = names(auc_prognostic),
     auc = auc_prognostic,
@@ -486,7 +550,8 @@ indexes_sn_prognostic <- tibble(
 )
 ```
 
-```{r Índices de especificidad para diagnóstico}
+
+```r
 indexes_sp_diagnostic <- tibble(
     identifier = names(auc_diagnostic),
     auc = auc_diagnostic,
@@ -496,7 +561,8 @@ indexes_sp_diagnostic <- tibble(
 )
 ```
 
-```{r Índices de especificidad para pronóstico}
+
+```r
 indexes_sp_prognostic <- tibble(
     identifier = names(auc_prognostic),
     auc = auc_prognostic,
@@ -512,7 +578,8 @@ indexes_sp_prognostic <- tibble(
 
 Antes de analizar en detalle los distintos índices, es conveniente describir algunas métricas generales. Para ello es posible utilizar la función `ROCnGO::summarize_dataset`.
 
-```{r Cálculo de métricas globales sensibilidad, warning=FALSE, cache=TRUE}
+
+```r
 metrics_diagnostic_tpr <- summarize_dataset(
     diagnostic_dataset,
     predictors = NULL,
@@ -522,7 +589,8 @@ metrics_diagnostic_tpr <- summarize_dataset(
 )
 ```
 
-```{r Cálculo de métricas globales especificidad, warning=FALSE, cache=TRUE}
+
+```r
 metrics_diagnostic_fpr <- summarize_dataset(
     diagnostic_dataset,
     predictors = NULL,
@@ -542,27 +610,63 @@ Para regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $
 
 Tras describir algunas métricas generales de los índices, se explorarán algunas medidas de tendencia central para realizar análisis más detallados. Con estas medidas será posible comprobar, entre otras cosas, el rango de valores que toman los índices.
 
-```{r Tendencia central de los parámetros de sensibilidad en diagnostico}
+
+```r
 summary(indexes_sn_diagnostic)
+```
+
+```
+##   identifier             auc               pauc              npauc        
+##  Length:2651        Min.   :0.07099   Min.   :0.000000   Min.   :0.00000  
+##  Class :character   1st Qu.:0.44546   1st Qu.:0.003134   1st Qu.:0.03134  
+##  Mode  :character   Median :0.56491   Median :0.009447   Median :0.09447  
+##                     Mean   :0.55931   Mean   :0.010910   Mean   :0.10910  
+##                     3rd Qu.:0.68095   3rd Qu.:0.016338   3rd Qu.:0.16338  
+##                     Max.   :0.94369   Max.   :0.060244   Max.   :0.60244  
+##                                                                           
+##      fpauc       
+##  Min.   :0.5000  
+##  1st Qu.:0.6952  
+##  Median :0.7659  
+##  Mean   :0.7517  
+##  3rd Qu.:0.8164  
+##  Max.   :0.9957  
+##  NA's   :145
 ```
 
 Como puede observarse, el $pAUC$ toma valores inferiores a $0.5$, el $NpAUC$ toma valores tanto valores inferiores como superiores a dicho valor y finalmente el $FpAUC$ solo presenta valores superiores. A simple vista, se puede observar como el $pAUC$ se convierte en un métrica de difícil interpretación, al contrario que el $NpAUC$ y $FpAUC$ que tienen límites definidos. Por otra parte, aunque tanto el $NpAUC$ como el $FpAUC$ están comprendidos por debajo de $1$ por su límite superior, no presentan el mismo límite inferior (secciones \@ref(npauc) y \@ref(fpauc)).
 
 Para ilustrar esta situación se utilizará el gen `ENSG00000169347`, el clasificador de mayor $FpAUC$ en la región de interés. Sus métricas pueden ser rápidamente visualizadas utilizando la función `ROCnGO::summarize_predictor`.
 
-```{r Métricas de ENSG00000169347, warning=FALSE, eval=FALSE}
+
+```r
 summarize_predictor(roc_data, ENSG00000169347, disease, "tpr", 0.9)
 ```
-```{r ENSG00000169347-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    summarize_predictor(roc_data, ENSG00000169347, disease, "tpr", 0.9)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.4502184 </td>
+   <td style="text-align:right;"> 0.0134041 </td>
+   <td style="text-align:right;"> 0.1340408 </td>
+   <td style="text-align:right;"> 0.9957314 </td>
+   <td style="text-align:left;"> Concave </td>
+  </tr>
+</tbody>
+</table>
 
 El clasificador toma aproximadamente el valor máximo para el $FpAUC$, sin embargo, presenta valores reducidos de $AUC$, $pAUC$ e incluso $NpAUC$. Para explicar estos resultados, la curva $ROC$ del clasificador será representada con la función `ROCnGO::plot_roc_curve`. Además, para facilitar la explicación, también se representará el límite inferior del $NpAUC$.
 
-```{r Predictor ENSG00000169347 con límite inferior de NpAUC}
+
+```r
 plot_roc_curve(roc_data, response = disease, predictor = ENSG00000169347) +
     add_chance_line() +
     add_tpr_threshold_line(0.9) +
@@ -574,11 +678,14 @@ plot_roc_curve(roc_data, response = disease, predictor = ENSG00000169347) +
     )
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Predictor ENSG00000169347 con límite inferior de NpAUC-1.png" width="672" />
+
 Como se puede observar, el límite inferior del $NpAUC$ se corresponde con la mitad del área de la banda $(TPR_0, 1)$. Dado que la curva $ROC$ queda descrita por debajo de esta área, el $NpAUC$ toma valores inferiores a $0.5$ y en consecuencia dificultando su interpretación. 
 
 Este no es el caso del límite inferior definido por el $FpAUC$, el cual se ajusta a la forma de la curva. Para visualizarlo de forma detalla, se graficará la curva $ROC$ en la región de alta sensibilidad utilizando la función `ROCnGO::plot_partial_roc_curve`.
 
-```{r Predictor con límite inferior de FpAUC, warning=FALSE}
+
+```r
 plot_partial_roc_curve(
     roc_data, 
     response = disease,
@@ -596,20 +703,38 @@ plot_partial_roc_curve(
     )
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Predictor con límite inferior de FpAUC-1.png" width="672" />
+
 Ampliando la figura en la región de interés, se observa como el límite inferior del $FpAUC$ se ajusta a la región definida por la curva $ROC$, en lugar de a toda la banda $(TPR_0, 1)$. Así, el $FpAUC$ toma valores mayores a $0.5$, siendo una métrica más interpretable. Este punto puede contrastarse con `ENSG00000105707`, el predictor de mayor valor para $NpAUC$.
 
-```{r Métricas de ENSG00000105707, warning=FALSE, eval=FALSE}
+
+```r
 summarize_predictor(roc_data, ENSG00000105707, disease, "tpr", 0.9)
 ```
-```{r ENSG00000105707-metrics, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    summarize_predictor(roc_data, ENSG00000105707, disease, "tpr", 0.9)
-) %>% 
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.9436868 </td>
+   <td style="text-align:right;"> 0.0602436 </td>
+   <td style="text-align:right;"> 0.6024364 </td>
+   <td style="text-align:right;"> 0.8642639 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+</tbody>
+</table>
 
 
-```{r Predictor ENSG00000105707 con límite inferior de NpAUC}
+
+```r
 plot_roc_curve(roc_data, response = disease, predictor = ENSG00000105707) +
     add_chance_line() +
     add_tpr_threshold_line(0.9) +
@@ -621,7 +746,10 @@ plot_roc_curve(roc_data, response = disease, predictor = ENSG00000105707) +
     )
 ```
 
-```{r Predictor ENSG00000105707 con límite inferior de FpAUC}
+<img src="05_AUC_indexes_files/figure-html/Predictor ENSG00000105707 con límite inferior de NpAUC-1.png" width="672" />
+
+
+```r
 plot_partial_roc_curve(
         roc_data,
         response = disease,
@@ -633,11 +761,14 @@ plot_partial_roc_curve(
     add_tpr_threshold_line(0.9)
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Predictor ENSG00000105707 con límite inferior de FpAUC-1.png" width="672" />
+
 En este caso, la mayor parte de la curva $ROC$ está contenida por encima del límite definido por $NpAUC$. Esto confirma el razonamiento anterior, ya que se obtienen valores superiores a $0.5$. Por otra parte, el $FpAUC$ no puede definir ningún límite inferior puesto que la curva presenta un gancho bajo la línea de azar en el extremo superior. A pesar de ello, el $FpAUC$ considera esta posibilidad por lo que sigue devolviendo valores interpretables.
 
 Otra característica de interés de los índices es su capacidad para distinguir predictores con el mismo $pAUC$ y curvas $ROC$ que se cruzan. De todo el conjunto de datos, 633 predictores presentan un $pAUC$ idéntico a otro, formando 246 grupos de $pAUC$ iguales. Para evaluar el rendimiento de los índices en este contexto se utilizarán los genes `ENSG00000065361`y `ENSG00000130653`, aquellos con el mayor valor de $pAUC$ entre los grupos formados.
 
-```{r Índices de alta sensbilidad para ENSG00000065361 y ENSG00000130653, warning=FALSE, eval=FALSE}
+
+```r
 bind_rows(
     "ENSG00000065361" = summarize_predictor(
         roc_data, ENSG00000065361, disease, "tpr", 0.9
@@ -648,21 +779,38 @@ bind_rows(
     .id = "Identifier"
 )
 ```
-```{r ENSG00000065361-ENSG00000130653-metrics, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    bind_rows(
-        "ENSG00000065361" = summarize_predictor(
-            roc_data, ENSG00000065361, disease, "tpr", 0.9
-        ),
-        "ENSG00000130653" = summarize_predictor(
-            roc_data, ENSG00000130653, disease, "tpr", 0.9
-        ),
-        .id = "Identifier"
-    )
-) %>%
-    kableExtra::kable_styling()
-```
-```{r Comparación de marcadores ENSG00000065361 y ENSG00000130653}
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000065361 </td>
+   <td style="text-align:right;"> 0.7715676 </td>
+   <td style="text-align:right;"> 0.0274287 </td>
+   <td style="text-align:right;"> 0.2742875 </td>
+   <td style="text-align:right;"> 0.8565737 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000130653 </td>
+   <td style="text-align:right;"> 0.7384692 </td>
+   <td style="text-align:right;"> 0.0274287 </td>
+   <td style="text-align:right;"> 0.2742875 </td>
+   <td style="text-align:right;"> 0.8351422 </td>
+   <td style="text-align:left;"> Partially proper </td>
+  </tr>
+</tbody>
+</table>
+
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -675,12 +823,14 @@ plot_roc_curve(
     ) +
     add_chance_line() +
     add_threshold_line(0.9, "tpr")
-
 ```
+
+<img src="05_AUC_indexes_files/figure-html/Comparación de marcadores ENSG00000065361 y ENSG00000130653-1.png" width="672" />
 
 Ambos predictores presentan $AUC$ relativamente altos y sus curvas se cruzan en diversos puntos dentro de la región de alta sensibilidad. Dado que el $NpAUC$ simplemente realiza una normalización utilizando la banda de alta sensibilidad \@ref(eq:npauc-normalized-bounds), la métrica no es capaz de seleccionar un predictor mejor, dando el mismo valor para ambas ($NpAUC = 0.2742875$). Por otra parte, el $FpAUC$ adapta sus límites a la forma de la curva $ROC$ por ello es capaz de seleccionar al de mejor rendimiento, `ENSG00000065361`. Siguiendo este ejemplo, se deduce que el $FpAUC$ presenta una mayor capacidad de discriminación entre predictores con igual $pAUC$, lo cual puede contrastarse con todo el conjunto de datos.
 
-```{r Número de desempates en índices de sensibilidad para diagnóstico, eval=FALSE}
+
+```r
 metrics_diagnostic_tpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -709,38 +859,24 @@ metrics_diagnostic_tpr$data %>%
         sort(names(.))
     )
 ```
-```{r unties-number-sensitivity, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    metrics_diagnostic_tpr$data %>%
-        filter(pauc != 0) %>%
-        group_by(pauc) %>%
-        filter(n() > 1) %>%
-        mutate(
-            npauc_equal = all(
-                map_lgl(np_auc, \(x) near(x, np_auc[[1]]))
-            ),
-            fpauc_equal = all(
-                map_lgl(fp_auc, \(x) near(x, fp_auc[[1]]))
-            )
-        ) %>%
-        summarize(
-            npauc_equal = all(npauc_equal),
-            fpauc_equal = all(fpauc_equal)
-        ) %>%
-        summarize(
-            npauc_equal = sum(npauc_equal),
-            fpauc_equal = sum(fpauc_equal)
-        ) %>%
-        mutate(
-            npauc_distintct = 246 - npauc_equal,
-            fpauc_distintct = 246 - fpauc_equal,
-        ) %>%
-        relocate(
-            sort(names(.))
-        )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> fpauc_distintct </th>
+   <th style="text-align:right;"> fpauc_equal </th>
+   <th style="text-align:right;"> npauc_distintct </th>
+   <th style="text-align:right;"> npauc_equal </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 47 </td>
+   <td style="text-align:right;"> 199 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 246 </td>
+  </tr>
+</tbody>
+</table>
 
 De los 246 grupos formados, el $NpAUC$ no es capaz de desempatar en ningún grupo, mientras que el $FpAUC$ es capaz de seleccionar un mejor clasificador en 47 de ellos. Estos cálculos sobre todo el conjunto de datos refuerzan la afirmación de que el $FpAUC$ tiene una mejor capacidad de discriminación que el $NpAUC$.
 
@@ -748,27 +884,153 @@ De los 246 grupos formados, el $NpAUC$ no es capaz de desempatar en ningún grup
 
 Al igual que con los índices de sensibilidad, en primer lugar, se explorarán algunas métricas de tendencia central.
 
-```{r Tendencia central de los parámetros de especificidad en diagnostico}
+
+```r
 summary(indexes_sp_diagnostic)
+```
+
+```
+##   identifier             auc               pauc              spauc       
+##  Length:2651        Min.   :0.07099   Min.   :0.000000   Min.   :0.5000  
+##  Class :character   1st Qu.:0.44546   1st Qu.:0.004635   1st Qu.:0.5278  
+##  Mode  :character   Median :0.56491   Median :0.011952   Median :0.5645  
+##                     Mean   :0.55931   Mean   :0.015553   Mean   :0.5813  
+##                     3rd Qu.:0.68095   3rd Qu.:0.023314   3rd Qu.:0.6213  
+##                     Max.   :0.94369   Max.   :0.074939   Max.   :0.8681  
+##                                                          NA's   :711     
+##      tpauc       
+##  Min.   :0.0000  
+##  1st Qu.:0.7347  
+##  Median :0.7841  
+##  Mean   :0.7763  
+##  3rd Qu.:0.8312  
+##  Max.   :1.0000  
+## 
 ```
 
 Observando las métricas el $pAUC$ solo toma valores inferiores a $0.5$ lo cual dificulta su interpretabilidad, a diferencia del $SpAUC$ y $TpAUC$ que pueden tomar valores superiores. Cabe destacar que el $TpAUC$ toma valores iguales a 0 cuando teóricamente debería estar comprendido en $(0.5, 1)$. 
 
-```{r TpAUCs igual a cero, eval=FALSE}
+
+```r
 indexes_sp_diagnostic %>%
     filter(tpauc == 0)
 ```
-```{r tapucs-cero, echo=FALSE}
-kableExtra::kbl(
-    indexes_sp_diagnostic %>%
-        filter(tpauc == 0)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> spauc </th>
+   <th style="text-align:right;"> tpauc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000169116 </td>
+   <td style="text-align:right;"> 0.1625038 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000135378 </td>
+   <td style="text-align:right;"> 0.1314358 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000148985 </td>
+   <td style="text-align:right;"> 0.5433650 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000171867 </td>
+   <td style="text-align:right;"> 0.1755287 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000085662 </td>
+   <td style="text-align:right;"> 0.1333895 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000167711 </td>
+   <td style="text-align:right;"> 0.2537542 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000101856 </td>
+   <td style="text-align:right;"> 0.0867300 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000185432 </td>
+   <td style="text-align:right;"> 0.1069951 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000121691 </td>
+   <td style="text-align:right;"> 0.2978854 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000148344 </td>
+   <td style="text-align:right;"> 0.3502145 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000091138 </td>
+   <td style="text-align:right;"> 0.2779651 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000186526 </td>
+   <td style="text-align:right;"> 0.4682616 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000156642 </td>
+   <td style="text-align:right;"> 0.1963684 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000170954 </td>
+   <td style="text-align:right;"> 0.2587726 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+</tbody>
+</table>
 
 Una exploración de los datos muestra como estos valores del $TpAUC$ se corresponden con valores de $pAUC$ iguales a $0$, lo cual se puede comprobar de forma gráfica representando algunos de ellos.
 
-```{r Representación de predictores con pAUC igual a 0}
+
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -783,9 +1045,12 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Representación de predictores con pAUC igual a 0-1.png" width="672" />
+
 Dado que las curvas de ambos predictores toman valores de $TPR = 0$, no hay un area definida debajo de la curva. Ampliando la imagen esto puede observarse con mayor claridad.
 
-```{r Ampliación de predictores con pAUC igual a 0}
+
+```r
 plot_partial_roc_curve(
     roc_data,
     response = disease,
@@ -803,15 +1068,38 @@ plot_partial_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Ampliación de predictores con pAUC igual a 0-1.png" width="672" />
+
 Tras comprobar el origen de los valores atípicos, es posible recalcular las métricas filtrando los valores de $pAUC = 0$. De esta forma, $TpAUC$ y $SpAUC$ se encuentran limitados por encima de $0.5$ convirtiéndose en métricas fácilmente interpretables.
 
-```{r Tendencia central de los parámetros de especificidad filtrado}
+
+```r
 summary(indexes_sp_diagnostic %>% filter(pauc != 0))
+```
+
+```
+##   identifier             auc               pauc               spauc       
+##  Length:2637        Min.   :0.07099   Min.   :7.660e-06   Min.   :0.5000  
+##  Class :character   1st Qu.:0.44622   1st Qu.:4.766e-03   1st Qu.:0.5278  
+##  Mode  :character   Median :0.56624   Median :1.198e-02   Median :0.5645  
+##                     Mean   :0.56098   Mean   :1.564e-02   Mean   :0.5813  
+##                     3rd Qu.:0.68162   3rd Qu.:2.337e-02   3rd Qu.:0.6213  
+##                     Max.   :0.94369   Max.   :7.494e-02   Max.   :0.8681  
+##                                                           NA's   :697     
+##      tpauc       
+##  Min.   :0.5000  
+##  1st Qu.:0.7354  
+##  Median :0.7846  
+##  Mean   :0.7804  
+##  3rd Qu.:0.8314  
+##  Max.   :1.0000  
+## 
 ```
 
 A pesar de tener buena interpretabilidad, el $SpAUC$ presenta valores de `NA`. Como se ha explicado anteriormente, el $SpAUC$ tiene su límite definido con el trapecio de puntos $(FPR_1, 0), (FPR_2, 0), (FPR_1, FPR_1)$ y $(FPR_2, FPR_2)$, o en otras palabras, el que coincide con la línea del azar. Este límite no se ajusta a curvas definidas por debajo de la línea (sección \@ref(spauc)), por esta razón la función devuelve estos valores. Esto es posible comprobarlo gráficamente con el predictor `ENSG00000181754`, un predictor que aun presentan una forma cóncava en la región de interés pasa por debajo de la línea del azar.
 
-```{r Métricas del predictor ENSG00000181754, eval=FALSE}
+
+```r
 summarize_predictor(
     roc_data,
     ENSG00000181754,
@@ -820,20 +1108,29 @@ summarize_predictor(
     0.1
 )
 ```
-```{r ENSG00000181754-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    summarize_predictor(
-        roc_data,
-        ENSG00000181754,
-        disease,
-        "fpr",
-        0.1
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.4311408 </td>
+   <td style="text-align:right;"> 0.0049425 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0.8215741 </td>
+   <td style="text-align:left;"> Concave </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Plot predictor ENSG00000181754, warning=FALSE}
+
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -857,9 +1154,12 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Plot predictor ENSG00000181754-1.png" width="672" />
+
 Como se observa en la figura, el límite inferior del $SpAUC$ se encuentra definido por encima de la curva $ROC$, por otra parte el límite del $TpAUC$ se adecua a la región y forma de la curva. Para contrastar este ajuste es posible seleccionar otro predictor con una forma de curva distinta, por ejemplo, `ENSG00000111667`.
 
-```{r Métricas del predictor ENSG00000111667, eval=FALSE}
+
+```r
 summarize_predictor(
     roc_data,
     ENSG00000111667,
@@ -868,20 +1168,29 @@ summarize_predictor(
     0.1
 )
 ```
-```{r ENSG00000111667-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    summarize_predictor(
-        roc_data,
-        ENSG00000111667,
-        disease,
-        "fpr",
-        0.1
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.413768 </td>
+   <td style="text-align:right;"> 0.0049954 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0.7985348 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Plot predictor ENSG00000111667, warning=FALSE}
+
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -905,11 +1214,14 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Plot predictor ENSG00000111667-1.png" width="672" />
+
 En este caso, la curva $ROC$ queda definida por debajo de la línea de azar y el $TpAUC$ no puede establecer un área mínima, por lo que establece el límite inferior a $0$. Por otra parte, el límite inferior del $SpAUC$ no se adecua y no puede ser calculado. Con estas observaciones, se deduce que tanto el $SpAUC$ y $TpAUC$ son métricas interpretables cuando se trabaja con curvas $ROC$ adecuadas al quedar comprendidas entre $0.5$ y $1$. Sin embargo, el $TpAUC$ se convierte en una métrica más adecuada en condiciones generales, ya que sus límites se ajustan a la forma de la curva $ROC$ a diferencia del $SpAUC$, imposibilitando su uso en curvas comprendidas debajo de la línea del azar.
 
 Una vez considerada la interpretabilidad de las métricas, se puede contrastar su capacidad para distinguir entre predictores con curvas que se cruzan e igual $pAUC$. Del conjunto de datos, 374 predictores presentan un $pAUC$ igual a otro, formando 174 grupos de $pAUC$ iguales. Para evaluar el rendimiento de los índices utilizaremos los predictores `ENSG00000175336` y `ENSG00000169733`, aquellos que presentan el mayor valor de $pAUC$ en este subgrupo de predictores.
 
-```{r Índices de alta especificidad para ENSG00000175336 y ENSG00000169733, eval=FALSE}
+
+```r
 bind_rows(
     "ENSG00000175336 " = summarize_predictor(
         roc_data,
@@ -928,31 +1240,39 @@ bind_rows(
     .id = "Identifier"
 )
 ```
-```{r ENSG00000175336-ENSG00000169733-metrics, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    bind_rows(
-        "ENSG00000175336 " = summarize_predictor(
-            roc_data,
-            ENSG00000175336,
-            disease,
-            "fpr",
-            0.1
-        ),
-        "ENSG00000169733" = summarize_predictor(
-            roc_data,
-            ENSG00000169733,
-            disease,
-            "fpr",
-            0.1
-        ),
-        .id = "Identifier"
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000175336 </td>
+   <td style="text-align:right;"> 0.8286086 </td>
+   <td style="text-align:right;"> 0.0475329 </td>
+   <td style="text-align:right;"> 0.7238576 </td>
+   <td style="text-align:right;"> 0.8695316 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000169733 </td>
+   <td style="text-align:right;"> 0.8126724 </td>
+   <td style="text-align:right;"> 0.0475329 </td>
+   <td style="text-align:right;"> 0.7238576 </td>
+   <td style="text-align:right;"> 0.9123511 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Comparación de marcadores ENSG00000175336 y ENSG00000169733}
 
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -965,14 +1285,16 @@ plot_roc_curve(
     ) +
     add_chance_line() +
     add_threshold_line(0.1, "fpr")
-
 ```
+
+<img src="05_AUC_indexes_files/figure-html/Comparación de marcadores ENSG00000175336 y ENSG00000169733-1.png" width="672" />
 
 Comprobando sus $AUC$, ambos predictores presentan un buen rendimiento global. El $SpAUC$ se mantiene igual para ambos predictores ($SpAUC = 0.7238576$) mientras que el $TpAUC$ toma valores distintos, lo que permite identificar el predictor de mejor rendimiento. Esta diferencia puede deberse a que el $TpAUC$ adapta sus límites a los puntos de la curva (sección \@ref(tpauc)), a diferencia del $SpAUC$ que los mantienen iguales.
 
 Esta capacidad de discriminación entre predictores se puede contrastar con el resto del conjunto de datos:
 
-```{r Número de desempates en índices de especificidad para diagnóstico, eval=FALSE}
+
+```r
 metrics_diagnostic_fpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -991,28 +1313,37 @@ metrics_diagnostic_fpr$data %>%
     ) %>%
     dplyr::count(spauc_equal, tpauc_equal)
 ```
-```{r unties-number-specificity, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    metrics_diagnostic_fpr$data %>%
-        filter(pauc != 0) %>%
-        group_by(pauc) %>%
-        filter(n() > 1) %>%
-        mutate(
-            spauc_equal = all(
-                map_lgl(sp_auc, \(x) near(x, sp_auc[[1]]))
-            ),
-            tpauc_equal = all(
-                map_lgl(tp_auc, \(x) near(x, tp_auc[[1]]))
-            )
-        ) %>%
-        summarize(
-            spauc_equal = all(spauc_equal),
-            tpauc_equal = all(tpauc_equal)
-        ) %>%
-        dplyr::count(spauc_equal, tpauc_equal)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> spauc_equal </th>
+   <th style="text-align:left;"> tpauc_equal </th>
+   <th style="text-align:right;"> n </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:right;"> 93 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:right;"> 2 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:right;"> 45 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:right;"> 34 </td>
+  </tr>
+</tbody>
+</table>
 
 De los 374 predictores con un $pAUC > 0$ y al menos igual a otro predictor (174 grupos), se observa como el $SpAUC$ no es capaz de diferenciar el predictor de mayor rendimiento en ningún caso. Además, el índice solo toma valores para 95 de los grupos, no estando definido para el resto. Por otro lado, el $TpAUC$ es capaz de distinguir un mejor predictor en 138 de los grupos, siendo incapaz de hacerlo solamente en 36 de ellos.
 
@@ -1024,7 +1355,8 @@ Los resultados sobre el conjunto de datos refuerzan que ambos índices son fáci
 
 En esta sección se repetirán los procedimientos realizados previamente, pero en esta ocasión serán aplicados a marcadores de pronóstico.
 
-```{r Cálculo de métricas globales sensibilidad-pronostico, warning=FALSE, cache=TRUE}
+
+```r
 metric_prognostic_tpr <- summarize_dataset(
     prognostic_dataset,
     predictors = NULL,
@@ -1034,7 +1366,8 @@ metric_prognostic_tpr <- summarize_dataset(
 )
 ```
 
-```{r Cálculo de métricas globales especificidad-pronostico, warning=FALSE, cache=TRUE}
+
+```r
 metric_prognostic_fpr <- summarize_dataset(
     prognostic_dataset,
     predictors = NULL,
@@ -1054,13 +1387,34 @@ Para regiones de alta especificidad ($FPR \le 0.1$), de los predictores con un $
 
 De forma similar al procedimiento en condiciones de diagnóstico, se explorarán algunas medidas de tendencia central.
 
-```{r Tendencia central de los parámetros de sensibilidad en pronóstico}
+
+```r
 summary(metric_prognostic_tpr$data)
+```
+
+```
+##   identifier             auc              pauc              np_auc       
+##  Length:2651        Min.   :0.2485   Min.   :0.000000   Min.   :0.00000  
+##  Class :character   1st Qu.:0.4289   1st Qu.:0.003098   1st Qu.:0.03098  
+##  Mode  :character   Median :0.4767   Median :0.004921   Median :0.04921  
+##                     Mean   :0.4778   Mean   :0.005477   Mean   :0.05477  
+##                     3rd Qu.:0.5249   3rd Qu.:0.007376   3rd Qu.:0.07376  
+##                     Max.   :0.7377   Max.   :0.024389   Max.   :0.24389  
+##                                                                          
+##      fp_auc       curve_shape       
+##  Min.   :0.5000   Length:2651       
+##  1st Qu.:0.6950   Class :character  
+##  Median :0.7434   Mode  :character  
+##  Mean   :0.7354                     
+##  3rd Qu.:0.7848                     
+##  Max.   :0.9758                     
+##  NA's   :1
 ```
 
 En este contexto, tanto el $pAUC$ como el $NpAUC$ toman valores inferiores a $0.5$ mientras que el $FpAUC$ toma superiores. Estos resultados probablemente se deban a los límites definidos por el $NpAUC$ y $FpAUC$. El $NpAUC$ define su límite inferior como la mitad del área de la banda $(TPR_0, 1)$ \@ref(eq:npauc-normalized-bounds), en consecuencia, una curva $ROC$ contenida por este límite resultará en valores de $NpAUC$ inferiores a $0.5$. Para visualizarlo, se escogerá el predictor `ENSG00000185615` que posee el mayor valor de $NpAUC$ en los datos. 
 
-```{r Métricas de ENSG00000185615, warning=FALSE, eval=FALSE}
+
+```r
 summarize_predictor(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     ENSG00000185615,
@@ -1069,20 +1423,29 @@ summarize_predictor(
     0.9
 )
 ```
-```{r ENSG00000185615-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    summarize_predictor(
-        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-        ENSG00000185615,
-        prognostic,
-        "tpr",
-        0.9
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.7143536 </td>
+   <td style="text-align:right;"> 0.0243888 </td>
+   <td style="text-align:right;"> 0.2438877 </td>
+   <td style="text-align:right;"> 0.7743255 </td>
+   <td style="text-align:left;"> Partially proper </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Predictor ENSG00000185615 con límite inferior de NpAUC}
+
+```r
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     response = prognostic,
@@ -1104,11 +1467,14 @@ plot_roc_curve(
     ) 
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Predictor ENSG00000185615 con límite inferior de NpAUC-1.png" width="672" />
+
 Como se observa en la figura, la curva $ROC$ queda definida por debajo del límite definido por $NpAUC$ pero por encima del definido por $FpAUC$. De esta forma, se confirma que el $FpAUC$ presenta mejor interpretabilidad, además de ser aplicable independientemente de la forma de la curva.
 
 Además de su interpretabilidad, es interesante evaluar la capacidad para distinguir predictores con igual $pAUC$ y cuyas curvas se cruzan en algún punto en la región de interés. De todo el conjunto de datos, 241 predictores presentan un $pAUC$ idéntico a al menos otro, formando 114 grupos en función de esta métrica. Para evaluar el rendimiento de los índices se utilizarán los predictores `ENSG00000272333` y `ENSG00000096070`, aquellos de mayor $pAUC$ en los grupos formados.
 
-```{r Índices de alta sensibilidad para ENSG00000272333 y ENSG00000096070, warning=FALSE, eval=FALSE}
+
+```r
 bind_rows(
     "ENSG00000272333" = summarize_predictor(
         prognostic_dataset %>% mutate(prognostic = disease$prognostic),
@@ -1127,30 +1493,39 @@ bind_rows(
     .id = "Identifier"
 )
 ```
-```{r ENSG00000272333-ENSG00000096070-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    bind_rows(
-        "ENSG00000272333" = summarize_predictor(
-            prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-            ENSG00000272333,
-            prognostic,
-            "tpr",
-            0.9
-        ),
-        "ENSG00000096070" = summarize_predictor(
-            prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-            ENSG00000096070,
-            prognostic,
-            "tpr",
-            0.9
-        ),
-        .id = "Identifier"
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000272333 </td>
+   <td style="text-align:right;"> 0.5947269 </td>
+   <td style="text-align:right;"> 0.0131597 </td>
+   <td style="text-align:right;"> 0.1315975 </td>
+   <td style="text-align:right;"> 0.7782804 </td>
+   <td style="text-align:left;"> Partially proper </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000096070 </td>
+   <td style="text-align:right;"> 0.5004503 </td>
+   <td style="text-align:right;"> 0.0131597 </td>
+   <td style="text-align:right;"> 0.1315975 </td>
+   <td style="text-align:right;"> 0.8087762 </td>
+   <td style="text-align:left;"> Concave </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Comparación de marcadores ENSG00000272333 y ENSG00000096070, warning=FALSE}
+
+```r
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     response = prognostic,
@@ -1163,12 +1538,14 @@ plot_roc_curve(
     ) +
     add_chance_line() +
     add_threshold_line(0.9, "tpr")
-
 ```
+
+<img src="05_AUC_indexes_files/figure-html/Comparación de marcadores ENSG00000272333 y ENSG00000096070-1.png" width="672" />
 
 En este caso, los predictores no presentan un buen rendimiento global, a diferencia de en la región de interés. En esta región ambas curvas se cruzan en varios puntos y mientras que el $NpAUC$ no es capaz de distinguir el predictor de mayor rendimiento ($NpAUC = 0.13159748$), el $FpAUC$ identifica que `ENSG00000096070` ($FpAUC = 0.8087762$) rinde mejor que `ENSG00000272333` ($FpAUC = 0.7782804$). De forma similar a las condiciones de diagnóstico, dado que el $FpAUC$ adapta sus límites a la forma y  puntos de la curva, puede distinguir entre predictores con igual $pAUC$ cuyas curvas se cruzan. Esta capacidad de discriminación puede contrastarse con el resto del conjunto de datos.
 
-```{r Número de desempates en índices de sensibilidad para pronóstico, eval=FALSE}
+
+```r
 metric_prognostic_tpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -1187,28 +1564,27 @@ metric_prognostic_tpr$data %>%
     ) %>%
     dplyr::count(npauc_equal, fpauc_equal)
 ```
-```{r unties-number-sensitivity-prognostic, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    metric_prognostic_tpr$data %>%
-        filter(pauc != 0) %>%
-        group_by(pauc) %>%
-        filter(n() > 1) %>%
-        mutate(
-            npauc_equal = all(
-                map_lgl(np_auc, \(x) near(x, np_auc[[1]]))
-            ),
-            fpauc_equal = all(
-                map_lgl(fp_auc, \(x) near(x, fp_auc[[1]]))
-            )
-        ) %>%
-        summarize(
-            npauc_equal = all(npauc_equal),
-            fpauc_equal = all(fpauc_equal)
-        ) %>%
-        dplyr::count(npauc_equal, fpauc_equal)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> npauc_equal </th>
+   <th style="text-align:left;"> fpauc_equal </th>
+   <th style="text-align:right;"> n </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:right;"> 38 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:right;"> 76 </td>
+  </tr>
+</tbody>
+</table>
 
 El $FpAUC$ es capaz de desempatar entre los predictores en 38 de los 114 grupos formados, mientras que el $NpAUC$ no es capaz de hacerlo en ninguno de ellos.
 
@@ -1216,15 +1592,36 @@ El $FpAUC$ es capaz de desempatar entre los predictores en 38 de los 114 grupos 
 
 Igual que en los casos anteriores, para realizar la evaluación de los índices se explorarán algunas métricas generales en primer lugar.
 
-```{r Tendencia central de los parámetros de especificidad en pronóstico}
+
+```r
 summary(metric_prognostic_fpr$data)
+```
+
+```
+##   identifier             auc              pauc               sp_auc      
+##  Length:2651        Min.   :0.2485   Min.   :0.0002866   Min.   :0.5000  
+##  Class :character   1st Qu.:0.4289   1st Qu.:0.0036109   1st Qu.:0.5065  
+##  Mode  :character   Median :0.4767   Median :0.0054696   Median :0.5148  
+##                     Mean   :0.4778   Mean   :0.0063296   Mean   :0.5196  
+##                     3rd Qu.:0.5249   3rd Qu.:0.0082330   3rd Qu.:0.5276  
+##                     Max.   :0.7377   Max.   :0.0277573   Max.   :0.6198  
+##                                                          NA's   :1167    
+##      tp_auc       curve_shape       
+##  Min.   :0.5000   Length:2651       
+##  1st Qu.:0.7088   Class :character  
+##  Median :0.7492   Mode  :character  
+##  Mean   :0.7443                     
+##  3rd Qu.:0.7855                     
+##  Max.   :0.9322                     
+## 
 ```
 
 De nuevo, el $pAUC$ solo toma valores inferiores a $0.5$ a diferencia del $SpAUC$ y $TpAUC$ que toman valores superiores. Además, el $SpAUC$ toma valores de `NA`, los cuales se corresponden para casos donde el límite inferior \@ref(eq:spauc-bounds) no se cumple, como se ha visto previamente. A diferencia del escenario anterior, el $TpAUC$ no toma valores atípicos por debajo de $0.5$, esto se debe a que no hay predictores con $pAUC = 0$.
 
 Para contrastar la interpretabilidad de ambos índices se utilizará arbitrariamente el predictor `ENSG00000110013`, que no presenta valor para el $SpAUC$ y uno relativamente alto para el $TpAUC$.
 
-```{r Métricas del predictor ENSG00000110013, warning=FALSE, eval=FALSE}
+
+```r
 summarize_predictor(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     ENSG00000110013,
@@ -1233,20 +1630,29 @@ summarize_predictor(
     0.1
 )
 ```
-```{r ENSG00000110013-metrics, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    summarize_predictor(
-        prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-        ENSG00000110013,
-        prognostic,
-        "fpr",
-        0.1
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0.3827888 </td>
+   <td style="text-align:right;"> 0.0008352 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0.9322034 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Plot predictor ENSG00000196363, warning=FALSE}
+
+```r
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     response = prognostic,
@@ -1270,13 +1676,16 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Plot predictor ENSG00000196363-1.png" width="672" />
+
 Como se observa en la figura, la curva $ROC$ se encuentra contenida bajo el límite inferior de $SpAUC$ y por tanto obteniendo un valor de `NA`. Por otra parte, el límite de $TpAUC$ ($0$, dado que $TPR = 0$ para toda la región) se ajusta a la forma de la curva y por tanto puede calcularse.
 
 Al igual que en los casos anteriores, de forma general $SpAUC$ y $TpAUC$ son métricas interpretables dado que se comprenden entre valores de $0.5$ y $1$. Sin embargo, el $SpAUC$ define límites que no se ajustan a ciertas curvas y por tanto imposibilitando su aplicación, mientras que el $TpAUC$ se ajusta a la forma de la curva, pudiéndose aplicar a cualquiera y por tanto haciéndola una métrica más idónea.
 
 Una vez considerada la interpretabilidad de ambas métricas, se contrastará su capacidad para discriminar predictores con curvas que se cruzan y de igual $pAUC$. Del conjunto de datos, 917 predictores presentan un $pAUC$ igual al menos a otro, formándose 407 grupos en función de esta métrica. Para estudiar la capacidad de discriminación, se utilizarán los predictores `ENSG00000177943` y `ENSG00000136783`, aquellos de mayor $pAUC$ entre los grupos formados.
 
-```{r Índices de alta especificidad para ENSG00000177943 y ENSG00000136783, warning=FALSE, eval=FALSE}
+
+```r
 bind_rows(
     "ENSG00000177943" = summarize_predictor(
         prognostic_dataset %>% mutate(prognostic = disease$prognostic),
@@ -1295,30 +1704,39 @@ bind_rows(
     .id = "Identifier"
 )
 ```
-```{r ENSG00000177943-ENSG00000136783-metrics, echo=FALSE, warning=FALSE}
-kableExtra::kbl(
-    bind_rows(
-        "ENSG00000177943" = summarize_predictor(
-            prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-            ENSG00000177943,
-            prognostic,
-            "fpr",
-            0.1
-        ),
-        "ENSG00000136783" = summarize_predictor(
-            prognostic_dataset %>% mutate(prognostic = disease$prognostic),
-            ENSG00000136783,
-            prognostic,
-            "fpr",
-            0.1
-        ),
-        .id = "Identifier"
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000177943 </td>
+   <td style="text-align:right;"> 0.6587407 </td>
+   <td style="text-align:right;"> 0.0172194 </td>
+   <td style="text-align:right;"> 0.5643124 </td>
+   <td style="text-align:right;"> 0.8111201 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000136783 </td>
+   <td style="text-align:right;"> 0.6306722 </td>
+   <td style="text-align:right;"> 0.0172194 </td>
+   <td style="text-align:right;"> 0.5643124 </td>
+   <td style="text-align:right;"> 0.7711047 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+</tbody>
+</table>
 
-```{r Comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
+
+```r
 plot_roc_curve(
          prognostic_dataset %>% mutate(prognostic = disease$prognostic),
          response = prognostic,
@@ -1333,9 +1751,12 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Comparación de marcadores ENSG00000177943 y ENSG00000136783-1.png" width="672" />
+
 Ambos predictores presentan un rendimiento ligeramente mejor que un clasificador aleatorio a nivel global, pero en la región de interés presentan un rendimiento mucho mejor. Los predictores presentan el mismo $SpAUC$ ($0.5643124$), a diferencia del $TpAUC$ que toma valores distintos e indica que `ENSG00000177943` presenta un mejor rendimiento.
 
-```{r Ampliación de comparación de marcadores ENSG00000177943 y ENSG00000136783, warning=FALSE}
+
+```r
 plot_partial_roc_curve(
          prognostic_dataset %>% mutate(prognostic = disease$prognostic),
          response = prognostic,
@@ -1368,9 +1789,12 @@ plot_partial_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Ampliación de comparación de marcadores ENSG00000177943 y ENSG00000136783-1.png" width="672" />
+
 Para este caso, ambos predictores poseen el mismo límite inferior para $TpAUC$, sin embargo sus límites superiores será distintos dado que poseen distinto $TPR_2$, \@ref(eq:tpauc-proper-bounds). Por este motivo, el índice toma valores distintos estableciendo que el predictor `ENSG00000177943` ($TpAUC = 0.8111201$) rinde mejor que `ENSG00000136783` ($TpAUC = 0.7711047$). Esta capacidad de discriminación se puede contrastar en todo el conjunto de datos.
 
-```{r Número de desempates en índices de especificidad para pronóstico, eval=FALSE}
+
+```r
 metric_prognostic_fpr$data %>%
     filter(pauc != 0) %>%
     group_by(pauc) %>%
@@ -1389,28 +1813,37 @@ metric_prognostic_fpr$data %>%
     ) %>%
     dplyr::count(spauc_equal, tpauc_equal)
 ```
-```{r unties-number-specificity-prognostic, warning=FALSE, echo=FALSE}
-kableExtra::kbl(
-    metric_prognostic_fpr$data %>%
-        filter(pauc != 0) %>%
-        group_by(pauc) %>%
-        filter(n() > 1) %>%
-        mutate(
-            spauc_equal = all(
-                map_lgl(sp_auc, \(x) near(x, sp_auc[[1]]))
-            ),
-            tpauc_equal = all(
-                map_lgl(tp_auc, \(x) near(x, tp_auc[[1]]))
-            )
-        ) %>%
-        summarize(
-            spauc_equal = all(spauc_equal),
-            tpauc_equal = all(tpauc_equal)
-        ) %>%
-        dplyr::count(spauc_equal, tpauc_equal)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> spauc_equal </th>
+   <th style="text-align:left;"> tpauc_equal </th>
+   <th style="text-align:right;"> n </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:right;"> 184 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:right;"> 28 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:right;"> 138 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> TRUE </td>
+   <td style="text-align:right;"> 56 </td>
+  </tr>
+</tbody>
+</table>
 
 De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un marcador que rinda mejor en ninguno de ellos. Además, no es capaz de aplicarse debido a la forma de la curva en 194 de ellos. Por otra parte el $TpAUC$ es capaz de diferenciar un mejor predictor en 323 grupos de los 407 totales. Este hecho refuerza que el $TpAUC$ es una mejor métrica a la hora de evaluar el rendimiento de un predictor, al ser aplicable a cualquier tipo de curva y discriminar entre predictores con igual $pAUC$, a diferencia del $SpAUC$.
 
@@ -1430,7 +1863,8 @@ Desde la primera vez que fue descrito, el antígeno específico de próstata (PS
 
 El nombre de PSA es utilizado en el ámbito clínico, pero en otros ámbitos también es conocido como kallikrein related peptidase 3 (*KLK3*), una proteasa expresada en las células del tejido. Este biomarcador se encuentra entre los descritos en el conjunto de datos con el identificador `ENSG00000142515`.
 
-```{r Métricas KLK3 diagnóstico, eval=FALSE}
+
+```r
 inner_join(
     metrics_diagnostic_tpr$data %>%
         filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
@@ -1440,23 +1874,37 @@ inner_join(
     suffix = c("_sens", "_spec")
 )
 ```
-```{r klk3-metrics-diagnostic, echo=FALSE}
-kableExtra::kbl(
-    inner_join(
-        metrics_diagnostic_tpr$data %>%
-            filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
-        metrics_diagnostic_fpr$data %>%
-            filter(identifier == "ENSG00000142515") %>% select(-curve_shape),
-        join_by(identifier, auc),
-        suffix = c("_sens", "_spec")
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc_sens </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:right;"> pauc_spec </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000142515 </td>
+   <td style="text-align:right;"> 0.649479 </td>
+   <td style="text-align:right;"> 0.0191005 </td>
+   <td style="text-align:right;"> 0.1910052 </td>
+   <td style="text-align:right;"> 0.7640208 </td>
+   <td style="text-align:right;"> 0.0135228 </td>
+   <td style="text-align:right;"> 0.544857 </td>
+   <td style="text-align:right;"> 0.7856116 </td>
+  </tr>
+</tbody>
+</table>
 
 Además de *KLK3*, entre los datos se pueden encontrar otros marcadores de diagnóstico conocidos, como *AMACR* (`ENSG00000242110`) y *FOLH1* (`ENSG00000086205`). El rendimiento de estos marcadores puede comparase con los diversos índices, para así, contrastarlos en función relevancia clínica.
 
-```{r Marcadores de diagnostico alternativos, eval=FALSE}
+
+```r
 known_markers <- c(
     "ENSG00000242110",
     "ENSG00000086205",
@@ -1466,21 +1914,47 @@ known_markers <- c(
 metrics_diagnostic_fpr$data %>%
     filter(identifier %in% known_markers)
 ```
-```{r other-diagnostic-markers, echo=FALSE}
-known_markers <- c(
-    "ENSG00000242110",
-    "ENSG00000086205",
-    "ENSG00000142515"
-)
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000086205 </td>
+   <td style="text-align:right;"> 0.8114848 </td>
+   <td style="text-align:right;"> 0.0414879 </td>
+   <td style="text-align:right;"> 0.6920416 </td>
+   <td style="text-align:right;"> 0.8457328 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000142515 </td>
+   <td style="text-align:right;"> 0.6494790 </td>
+   <td style="text-align:right;"> 0.0135228 </td>
+   <td style="text-align:right;"> 0.5448570 </td>
+   <td style="text-align:right;"> 0.7856116 </td>
+   <td style="text-align:left;"> Partially Proper </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000242110 </td>
+   <td style="text-align:right;"> 0.9157217 </td>
+   <td style="text-align:right;"> 0.0672311 </td>
+   <td style="text-align:right;"> 0.8275320 </td>
+   <td style="text-align:right;"> 0.8231707 </td>
+   <td style="text-align:left;"> Concave </td>
+  </tr>
+</tbody>
+</table>
 
-kableExtra::kbl(
-    metrics_diagnostic_fpr$data %>%
-        filter(identifier %in% known_markers)
-) %>%
-    kableExtra::kable_styling()
-```
 
-```{r Marcadores de diagnóstico}
+```r
 plot_roc_curve(
     roc_data,
     response = disease,
@@ -1492,9 +1966,12 @@ plot_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Marcadores de diagnóstico-1.png" width="672" />
+
 Tras representar las curvas $ROC$ de los clasificadores se puede observar como *KLK3* no presenta un buen rendimiento a nivel global. Sin embargo, este predictor presenta mejor rendimiento en la región de interés, lo cual puede explicar su uso hasta la fecha. A pesar de ello, como se ha explicado previamente, *KLK3* presenta un gran número de falsos positivos, lo cual, explica que otros predictores como *FOLH1* y *AMACR* presentan mejores puntuaciones en la región de interés.
 
-```{r Marcadores de diagnóstico en alta especificidad, warning=FALSE}
+
+```r
 plot_partial_roc_curve(
     roc_data,
     response = disease,
@@ -1534,29 +2011,45 @@ plot_partial_roc_curve(
     add_threshold_line(0.1, "fpr")
 ```
 
+<img src="05_AUC_indexes_files/figure-html/Marcadores de diagnóstico en alta especificidad-1.png" width="672" />
+
 Si nos centramos en esta zona, el $SpAUC$ califica al *AMACR* como el predictor de mejor rendimiento ($SpAUC = 0.828$), pero además, puntúa relativamente bajo al resto, es decir a *KLK3* y *FOLH1* ($SpAUC = 0.545$ y $SpAUC = 0.692$). Por otra parte, el $TpAUC$ califica a *FOLH1* como el predictor de mayor rendimiento ($TpAUC = 0.846$) y al *AMACR* como valores muy similares ($TpAUC = 0.823$).
 
 Contrastando estos resultados con otros estudios, tanto el *AMACR* como el *FOLH1* se encuentran sobrexpresados en pacientes con la enfermedad [@amacr-marker; @folh1-marker]. Sin embargo, *FOLH1* presenta un mayor interés, por además de su uso a nivel de diagnóstico, como diana terapéutica [@folh1-therapeutic]. Esto refuerza la interpretación dada por $TpAUC$, donde tanto *AMACR* y *FOLH1* presentan potencial como clasificadores, y en concreto este último, un rendimiento ligermante superior.
 
 Si se selecciona alguno los primeros marcadores identificados por el $TpAUC$, puede observarse que se encuentran relacionados con la enfermedad, por ejemplo *ESRP2* (`ENSG00000103067`), al cual estudios recientes lo describen por tener un papel relevante en el desarrollo de la enfermedad [@esrp2-marker].
 
-```{r Gen ESRP2, eval=FALSE}
+
+```r
 metrics_diagnostic_fpr$data %>%
     filter(identifier == "ENSG00000103067") %>%
     select(-curve_shape)
 ```
-```{r esrp2-gen, echo=FALSE}
-kableExtra::kbl(
-    metrics_diagnostic_fpr$data %>%
-        filter(identifier == "ENSG00000103067") %>%
-        select(-curve_shape)
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000103067 </td>
+   <td style="text-align:right;"> 0.8339335 </td>
+   <td style="text-align:right;"> 0.0499464 </td>
+   <td style="text-align:right;"> 0.7365598 </td>
+   <td style="text-align:right;"> 0.9497378 </td>
+  </tr>
+</tbody>
+</table>
 
 Por otra parte, *KLK3* presenta un rendimiento peor que un clasificador aleatorio para distinguir entre pacientes con una enfermedad más o menos agresiva.
 
-```{r Métricas KLK3 estratificación de riesgo, eval=FALSE}
+
+```r
 inner_join(
     metric_prognostic_fpr$data %>%
         filter(identifier == "ENSG00000142515") %>%
@@ -1568,23 +2061,35 @@ inner_join(
     suffix = c("_spec", "_sens")
 )
 ```
-```{r metrics-klk3-prognostic, echo=FALSE}
-kableExtra::kbl(
-    inner_join(
-        metric_prognostic_fpr$data %>%
-            filter(identifier == "ENSG00000142515") %>%
-            select(-curve_shape),
-        metric_prognostic_tpr$data %>%
-            filter(identifier == "ENSG00000142515") %>%
-            select(-curve_shape),
-        join_by(identifier, auc),
-        suffix = c("_spec", "_sens")
-    )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc_spec </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:right;"> pauc_sens </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000142515 </td>
+   <td style="text-align:right;"> 0.3177106 </td>
+   <td style="text-align:right;"> 0.0008106 </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> 0.779661 </td>
+   <td style="text-align:right;"> 0.0011463 </td>
+   <td style="text-align:right;"> 0.0114632 </td>
+   <td style="text-align:right;"> 0.6690821 </td>
+  </tr>
+</tbody>
+</table>
 
-```{r ROC KLK3 estratificación de riesgo}
+
+```r
 plot_roc_curve(
     prognostic_dataset %>% mutate(prognostic = disease$prognostic),
     response = prognostic,
@@ -1593,9 +2098,12 @@ plot_roc_curve(
     add_chance_line()
 ```
 
+<img src="05_AUC_indexes_files/figure-html/ROC KLK3 estratificación de riesgo-1.png" width="672" />
+
 La curva $ROC$ del predictor queda definida por debajo de la línea de azar, confirmando un rendimiento peor que un clasificador completamente aleatorio. Cabe destacar, que el cálculo de la curva se ha realizado considerando como condición de interés padecer una forma de la enfermedad más agresiva, y por tanto es posible que el *KLK3* rinda mejor identificando formas menos agresivas de la enfermedad. Para comprobarlo, es posible invertir la forma de la curva, lo cual resulta equivalente a invertir la condición de interés. 
 
-```{r Inversión de la curva ROC de KLK3 en estratificación de riesgo, eval=FALSE}
+
+```r
 inverse_prognostic_dataset <- prognostic_dataset %>%
     mutate(
         prognostic = disease$prognostic
@@ -1642,57 +2150,35 @@ inner_join(
         !starts_with("curve_shape")
     )
 ```
-```{r inverse-klk3-prognostic, echo=FALSE, warning=FALSE}
-inverse_prognostic_dataset <- prognostic_dataset %>%
-    mutate(
-        prognostic = disease$prognostic
-    )
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc_spec </th>
+   <th style="text-align:right;"> sp_auc </th>
+   <th style="text-align:right;"> tp_auc </th>
+   <th style="text-align:right;"> pauc_sens </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000142515 </td>
+   <td style="text-align:right;"> 0.6822894 </td>
+   <td style="text-align:right;"> 0.0151036 </td>
+   <td style="text-align:right;"> 0.5531767 </td>
+   <td style="text-align:right;"> 0.7319498 </td>
+   <td style="text-align:right;"> 0.0152133 </td>
+   <td style="text-align:right;"> 0.152133 </td>
+   <td style="text-align:right;"> 0.7315611 </td>
+  </tr>
+</tbody>
+</table>
 
-inverse_prognostic_dataset$prognostic <- fct_recode(
-    inverse_prognostic_dataset$prognostic,
-    "1" = "0",
-    "0" = "1"
-)
 
-inverse_prognostic_dataset$prognostic <- fct_relevel(
-    inverse_prognostic_dataset$prognostic,
-    "0"
-)
-
-tpr_metrics <- summarize_predictor(
-    inverse_prognostic_dataset,
-    predictor = ENSG00000142515,
-    response = prognostic,
-    ratio = "tpr",
-    threshold = 0.9
-)
-fpr_metrics <- summarize_predictor(
-    inverse_prognostic_dataset,
-    predictor = ENSG00000142515,
-    response = prognostic,
-    ratio = "fpr",
-    threshold = 0.1
-)
-
-kableExtra::kbl(
-    inner_join(
-        fpr_metrics,
-        tpr_metrics,
-        join_by(auc),
-        suffix = c("_spec", "_sens")
-    ) %>%
-        mutate(
-            identifier = "ENSG00000142515",
-            .before = 1
-        ) %>%
-        select(
-            !starts_with("curve_shape")
-        )
-) %>%
-    kableExtra::kable_styling()
-```
-
-```{r ROC inversa de KLK3}
+```r
 plot_roc_curve(
     inverse_prognostic_dataset,
     response = prognostic,
@@ -1701,11 +2187,14 @@ plot_roc_curve(
     add_chance_line()
 ```
 
+<img src="05_AUC_indexes_files/figure-html/ROC inversa de KLK3-1.png" width="672" />
+
 Al realizar la inversión, las diversas métricas presentan ciertas mejoras a excepción del $TpAUC$ que se ve ligeramente reducido. A pesar de ello, las métricas obtenidas distan de ser ideales para el ámbito clínico.
 
 Para realizar un mejor contraste, estas métricas se compararán con otros predictores usados en tests de estratificación de riesgo [@risk-tests], como por ejemplo: Decipher [@decipher] y Oncotype [@oncotype].
 
-```{r Identificadores de marcadores en tests Decipher y Oncotype, eval=FALSE}
+
+```r
 decipher <- tibble::tribble(
     ~name, ~ensemble,
     "LASP1", "ENSG00000002834",
@@ -1752,56 +2241,60 @@ metric_prognostic_tpr$data %>%
         identifier %in% decipher$ensemble
     )
 ```
-```{r decipher-oncotype-markers, echo=FALSE}
-decipher <- tibble::tribble(
-    ~name, ~ensemble,
-    "LASP1", "ENSG00000002834",
-    "IQGAP3", "ENSG00000183856",
-    "NFIB", "ENSG00000147862",
-    "S1PR4", "ENSG00000125910",
-    "THBS2", "ENSG00000186340",
-    "ANO7", "ENSG00000146205",
-    "PCDH7", "ENSG00000169851",
-    "MYBPC1", "ENSG00000196091",
-    "EPPK1", "ENSG00000261150",
-    "PBX1", "ENSG00000185630",
-    "NUSAP1", "ENSG00000137804",
-    "ZWILCH", "ENSG00000174442",
-    "UBE2C", "ENSG00000175063",
-    "CAMK2N1", "ENSG00000162545",
-    "RABGAP1", "ENSG00000011454",
-    "TNFRSF19", "ENSG00000127863"
-)
-
-oncotype <- tibble::tribble(
-    ~name, ~ensemble,
-    "BGN", "ENSG00000182492",
-    "COL1A1", "ENSG00000108821",
-    "SFRP4", "ENSG00000106483",
-    "FLNC", "ENSG00000128591",
-    "GSN", "ENSG00000148180",
-    "TPM2", "ENSG00000198467",
-    "GSTM2", "ENSG00000213366",
-    "TPX2", "ENSG00000088325",
-    "LAMB3", "ENSG00000196878",
-    "FAM13C", "ENSG00000148541",
-    "KLK2", "ENSG00000167751",
-    "AZGP1", "ENSG00000160862",
-    "SRD5A2", "ENSG00000277893",
-    "DUSP1", "ENSG00000120129",
-    "FOS", "ENSG00000170345"
-)
-
-kableExtra::kbl(
-    metric_prognostic_tpr$data %>%
-        arrange(desc(fp_auc)) %>%
-        filter(
-            identifier %in% oncotype$ensemble |
-            identifier %in% decipher$ensemble
-        )
-) %>%
-    kableExtra::kable_styling()
-```
+<table class="table" style="margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> identifier </th>
+   <th style="text-align:right;"> auc </th>
+   <th style="text-align:right;"> pauc </th>
+   <th style="text-align:right;"> np_auc </th>
+   <th style="text-align:right;"> fp_auc </th>
+   <th style="text-align:left;"> curve_shape </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> ENSG00000196091 </td>
+   <td style="text-align:right;"> 0.3068206 </td>
+   <td style="text-align:right;"> 0.0008597 </td>
+   <td style="text-align:right;"> 0.0085974 </td>
+   <td style="text-align:right;"> 0.7536232 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000127863 </td>
+   <td style="text-align:right;"> 0.4276427 </td>
+   <td style="text-align:right;"> 0.0015230 </td>
+   <td style="text-align:right;"> 0.0152297 </td>
+   <td style="text-align:right;"> 0.7246377 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000146205 </td>
+   <td style="text-align:right;"> 0.3072628 </td>
+   <td style="text-align:right;"> 0.0005371 </td>
+   <td style="text-align:right;"> 0.0053713 </td>
+   <td style="text-align:right;"> 0.6980676 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000160862 </td>
+   <td style="text-align:right;"> 0.3320233 </td>
+   <td style="text-align:right;"> 0.0002522 </td>
+   <td style="text-align:right;"> 0.0025219 </td>
+   <td style="text-align:right;"> 0.6859903 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ENSG00000167751 </td>
+   <td style="text-align:right;"> 0.3659052 </td>
+   <td style="text-align:right;"> 0.0018865 </td>
+   <td style="text-align:right;"> 0.0188651 </td>
+   <td style="text-align:right;"> 0.6739130 </td>
+   <td style="text-align:left;"> Hook under chance </td>
+  </tr>
+</tbody>
+</table>
 
 Entre los datos, es posible encontrar marcadores utilizados en estos tests, los cuales presentan puntuaciones relativamente bajas, a excepción del $FpAUC$ que las puntúa en mejor medida. Contrastando estos resultados, se puede observar como el $FpAUC$ es más representativo de los marcadores actualmente utilizados en tests de estratificación de riesgos. Es más, entre los predictores con mayor $FpAUC$ se encuentra `ENSG00000112210` (*RAB23*), el cual se encuentra relacionado con la progresión de la enfermedad [@rab23-marker].
 
