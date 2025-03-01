@@ -16,7 +16,7 @@ Finalmente, en el repositorio también se encuentra disponible un script en pyth
 
 Este análisis tiene como finalidad estudiar distintos índices de áreas parciales como métricas del rendimiento de un clasificador, además de identificar cual de ellos presenta un mejor desempeño identificando biomarcadores. Así, los distintos pasos seguidos en el análisis se encuentran divididos en 3 secciones principales:
 
-1. Búsqueda de marcadores. Utilizando datos de experimentos de scRNA-seq, en esta sección se identifican células de tejido responsable de la enfermedad de estudio, cáncer de próstata, y se seleccionan marcadores genéticos que puedan estar relacionadas con ella.
-1. Generación de una matriz de cuentas. En esta sección se genera el conjunto de datos sobre el que analizar los distintos índices de áreas parciales. Para ello, se extraen perfiles de expresión de muestras del TCGA filtrados con los marcadores identificados en la sección anterior.
-1. Evaluación de índices. En esta última sección se describe el fundamento matemático de los distintos índices a evaluar. Finalmente, son aplicados al conjunto de datos y sus resultados son contrastados con marcadores ya conocidos en la práctica.
+1. **Búsqueda de marcadores**. Utilizando datos de experimentos de scRNA-seq, en esta sección se identifican células de tejido responsable de la enfermedad de estudio, cáncer de próstata, y se seleccionan marcadores genéticos que puedan estar relacionadas con ella.
+1. **Generación de una matriz de cuentas**. En esta sección se genera el conjunto de datos sobre el que analizar los distintos índices de áreas parciales. Para ello, se extraen perfiles de expresión de muestras del TCGA filtrados con los marcadores identificados en la sección anterior.
+1. **Evaluación de índices**. En esta última sección se describe el fundamento matemático de los distintos índices a evaluar. Finalmente, estos son aplicados al conjunto de datos y sus resultados son contrastados con marcadores ya conocidos en la práctica.
 
