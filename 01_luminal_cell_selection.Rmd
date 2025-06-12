@@ -1,8 +1,8 @@
-# (PART) Búsqueda de marcadores {-}
+# (PART) Búsqueda de biomarcadores {-}
 
 # Selección de células luminales de prostata {#luminal-cells-selection}
 
-En esta sección se identificarán y seleccionarán células luminales de próstata, precursoras de la enfermedad, que posteriormente se usarán para identificar marcadores de la enfermedad. Para ello se utilizarán los datos de experimentos de scRNA-seq obtenidos de muestras de pacientes con la enfermedad [@base].
+En esta sección se identificarán y seleccionarán células luminales de próstata, precursoras de la enfermedad, que posteriormente se usarán para identificar biomarcadores de la enfermedad. Para ello se utilizarán los datos de experimentos de scRNA-seq obtenidos de muestras de pacientes con la enfermedad [@base].
 
 ```{r Librerias, include=FALSE}
 library(Seurat)
@@ -41,7 +41,7 @@ GSM4773522_PCa1_counts_matrix <- import_gene_counts(
 
 ## Preprocesamiento y CQ
 
-Para realizar el análisis se utilizará el paquete **Seurat**, el cual proveerá las herramientas necesarias para llevar a cabo la selección de marcadores, así como de células de interés [@R-Seurat].
+Para realizar el análisis se utilizará el paquete **Seurat**, el cual proveerá las herramientas necesarias para llevar a cabo la selección de biomarcadores, así como de células de interés [@R-Seurat].
 
 ### Creación del objeto Seurat
 
@@ -159,7 +159,7 @@ seurat_objects <- ScaleData(
 
 Como se ha expresado previamente, el conjunto de datos tiene un alto número de variables y por tanto es conveniente aplicar técnicas de reducción de la dimensionalidad para trabajar con él. Por este motivo se realizará un análisis de componentes principales (PCA) sobre los datos ya escalados.
 
-Para aplicar esta técnica **Seurat** provee la función `RunPCA` donde, de forma similar a la sección anterior, se especificarán los genes de mayor variabilidad (`features`), dado que serán estos con los que se desea trabajar.
+Para aplicar esta técnica, **Seurat** provee la función `RunPCA` donde, de forma similar a la sección anterior, se especificarán los genes de mayor variabilidad (`features`), dado que serán estos con los que se desea trabajar.
 
 ```{r PCA, cache=TRUE, warning=FALSE, message=FALSE}
 seurat_objects <- RunPCA(
@@ -327,7 +327,8 @@ significative_markers %>%
 knitr::kable(
     significative_markers %>%
         filter(gene == "KRT18" | gene == "KRT8") %>%
-        arrange(desc(avg_log2FC), desc(avg_log2FC))
+        arrange(desc(avg_log2FC), desc(avg_log2FC)) %>%
+        mutate(across(c(p_val, p_val_adj), ~ tibble::num(.x, digits = 3, notation = "sci")))
 )
 ```
 
