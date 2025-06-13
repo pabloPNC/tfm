@@ -1,5 +1,5 @@
 ---
-title: "Evaluación del rendimiento de la clasificación en la toma de decisiones y el diagnóstico médico"
+title: "Evaluación de métricas para la búsqueda de biomarcadores de diagnóstico y pronóstico clínico"
 author: "Pablo Navarro"
 site: bookdown::bookdown_site
 bibliography: ["packages.bib", "references.bib"]

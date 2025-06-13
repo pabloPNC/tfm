@@ -12,7 +12,7 @@ library(ROCpAI)
 library(ROCnGO)
 ```
 
-En esta sección del trabajo se estudiarán los distintos índices aplicados a los marcadores de la sección anterior. En primer lugar, se describirá el fundamento teórico y limitaciones de cada uno de ellos. Tras ello, estos índices serán aplicados al conjunto de datos utilizando las distintas variables respuesta. Finalmente, se evaluará su capacidad para seleccionar los clasificadores de mayor rendimiento, además de contrastar sus resultados con marcadores de utilidad aplicados actualmente en la práctica.
+En esta sección del trabajo se estudiarán los distintos índices aplicados a los biomarcadores de la sección anterior. En primer lugar, se describirá el fundamento teórico y limitaciones de cada uno de ellos. Tras ello, estos índices serán aplicados al conjunto de datos utilizando las distintas variables respuesta. Finalmente, se evaluará su capacidad para seleccionar los biomarcadores de mayor rendimiento, además de contrastar sus resultados con otros de utilidad aplicados actualmente en la práctica.
 
 Para esta sección necesitaremos el conjunto de datos generado en la anterior sesión. El conjunto de datos contiene los niveles de diversos genes expresados en células luminales de próstata de pacientes con cáncer.
 
@@ -99,7 +99,7 @@ auc_prognostic <- map_dbl(
 
 En ciertos contextos, el estudio de la curva $ROC$ en su totalidad no es de interés. En aplicaciones médicas y en otros campos, suelen seleccionarse ciertos rangos de la curva debido al interés por unos valores concretos de $TPR$ o $FPR$.
 
-Por ejemplo, en un contexto de diagnóstico, un marcador con un bajo $FPR$ (alta especificidad) es relevante a la hora de confirmar la presencia de una condición ("rule in"), dado que es muy improbable que se de un falso positivo. Mientras que un marcador con un alto $TPR$ (alta sensibilidad) es relevante para descartar la presencia de una condición ("rule out"), dado que es muy improbable que se de un falso negativo.
+Por ejemplo, en un contexto de diagnóstico, un biomarcador con un bajo $FPR$ (alta especificidad) es relevante a la hora de confirmar la presencia de una condición ("rule in"), dado que es muy improbable que se de un falso positivo. Mientras que un biomarcador con un alto $TPR$ (alta sensibilidad) es relevante para descartar la presencia de una condición ("rule out"), dado que es muy improbable que se de un falso negativo.
 
 En este tipo de situaciones, el área parcial de la curva $ROC$ ($pAUC$) atrae mucha más atención como métrica, ya que sintetiza la información en la región de interés en lugar de en toda la curva.
 
@@ -175,7 +175,7 @@ pauc_sn_diagnostic <- map_dbl(
 
 ### Problemas del pAUC
 
-Aunque el $pAUC$ puede ser útil para trabajar en regiones de interés en la curva $ROC$, no está libre de fallas. Este índice ha sido cuestionado por su falta de interpretabilidad, ya que aunque algunos marcadores presentan valores altos de $AUC$ y rinden bien en las zonas seleccionadas, presentan valores de $pAUC$ muy cercanos a 0. Esto puede comprobarse, por ejemplo, con los 10 marcadores de mayor $AUC$ en condiciones de alta especificidad:
+Aunque el $pAUC$ puede ser útil para trabajar en regiones de interés en la curva $ROC$, no está libre de fallas. Este índice ha sido cuestionado por su falta de interpretabilidad, ya que aunque algunos biomarcadores presentan valores altos de $AUC$ y rinden bien en las zonas seleccionadas, presentan valores de $pAUC$ muy cercanos a 0. Esto puede comprobarse, por ejemplo, con los 10 biomarcadores de mayor $AUC$ en condiciones de alta especificidad:
 
 ```{r Comparación entre AUCs y pAUCs, eval=FALSE}
 enframe(auc_diagnostic) %>%
@@ -460,7 +460,7 @@ fpauc_sn_prognostic <- map_dbl(
 
 ## Comparación de índices
 
-Hasta ahora, para identificar posibles marcadores de diagnóstico y pronóstico se han utilizado distintos índices en condiciones de alta sensibilidad y especificidad. Sin embargo, como se ha explicado previamente, cada índice presenta una serie de ventajas y desventajas. Por consiguiente, para evaluar cual de todos los índices presenta un mejor rendimiento para seleccionar clasificadores, se compararán cada uno de sus resultados.
+Hasta ahora, para identificar posibles biomarcadores de diagnóstico y pronóstico se han utilizado distintos índices en condiciones de alta sensibilidad y especificidad. Sin embargo, como se ha explicado previamente, cada índice presenta una serie de ventajas y desventajas. Por consiguiente, para evaluar cual de todos los índices presenta un mejor rendimiento para seleccionar clasificadores, se compararán cada uno de sus resultados.
 
 ### Agrupar por condiciones
 
@@ -506,7 +506,7 @@ indexes_sp_prognostic <- tibble(
 )
 ```
 
-### Marcadores para diagnóstico
+### Biomarcadores para diagnóstico
 
 #### Métricas generales
 
@@ -589,7 +589,7 @@ plot_partial_roc_curve(
     add_chance_line() +
     add_tpr_threshold_line(0.9) +
     add_fpauc_concave_lower_bound(
-        roc_data,
+        data = roc_data,
         response = disease,
         predictor = ENSG00000169347,
         threshold = 0.9
@@ -1018,7 +1018,7 @@ De los 374 predictores con un $pAUC > 0$ y al menos igual a otro predictor (174 
 
 Los resultados sobre el conjunto de datos refuerzan que ambos índices son fácilmente interpretables. Sin embargo, muestran que el $SpAUC$ no es aplicable cuando la curva $ROC$ pasa por debajo de la línea del azar. Además, el $SpAUC$ no es capaz de discriminar entre ciertos predictores. Por otra parte, el $TpAUC$ resulta más útil en la práctica al poder aplicarse a cualquier tipo de curva y ser capaz de discriminar entre predictores con igual $pAUC$.
 
-### Marcadores para pronóstico
+### Biomarcadores para pronóstico
 
 #### Métricas generales
 
@@ -1412,7 +1412,7 @@ kableExtra::kbl(
     kableExtra::kable_styling()
 ```
 
-De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un marcador que rinda mejor en ninguno de ellos. Además, no es capaz de aplicarse debido a la forma de la curva en 194 de ellos. Por otra parte el $TpAUC$ es capaz de diferenciar un mejor predictor en 323 grupos de los 407 totales. Este hecho refuerza que el $TpAUC$ es una mejor métrica a la hora de evaluar el rendimiento de un predictor, al ser aplicable a cualquier tipo de curva y discriminar entre predictores con igual $pAUC$, a diferencia del $SpAUC$.
+De los 407 grupos de grupos formados, el $SpAUC$ no es capaz de diferenciar un biomarcador que rinda mejor en ninguno de ellos. Además, no es capaz de aplicarse debido a la forma de la curva en 194 de ellos. Por otra parte el $TpAUC$ es capaz de diferenciar un mejor predictor en 323 grupos de los 407 totales. Este hecho refuerza que el $TpAUC$ es una mejor métrica a la hora de evaluar el rendimiento de un predictor, al ser aplicable a cualquier tipo de curva y discriminar entre predictores con igual $pAUC$, a diferencia del $SpAUC$.
 
 ## Resultados
 
@@ -1424,7 +1424,7 @@ Como se ha comprobado en las secciones anteriores, estas limitaciones son comune
 
 ### Relevancia clínica
 
-Aunque teóricamente el $TpAUC$ y $FpAUC$ solventan las limitaciones de otros índices, en la práctica, estas también deben de ser capaces de encontrar marcadores clínicamente relevantes. Esta capacidad puede comprobarse con el conjunto de datos generado y predictores ya conocidos para el diagnóstico y estratificación de pacientes en cáncer de próstata.
+Aunque teóricamente el $TpAUC$ y $FpAUC$ solventan las limitaciones de otros índices, en la práctica, estas también deben de ser capaces de encontrar biomarcadores clínicamente relevantes. Esta capacidad puede comprobarse con el conjunto de datos generado y predictores ya conocidos para el diagnóstico y estratificación de pacientes en cáncer de próstata.
 
 Desde la primera vez que fue descrito, el antígeno específico de próstata (PSA) ha sido utilizado en los planes de diagnóstico y tratamiento de pacientes con cáncer de próstata. Desde su aplicación, la mortalidad y el número de diagnósticos en estados avanzados de la enfermedad se ha reducido, sin embargo, este biomarcador presenta ciertas limitaciones [@tumor-heterogeneity]. Aunque el PSA es específico del tejido, este puede presentarse en lesiones benignas, es decir, generando falsos positivos. Además, a la hora de realizar una estratificación de riesgo de un paciente requiere de utilizar otras técnicas y métricas adicionales.
 
@@ -1454,7 +1454,7 @@ kableExtra::kbl(
     kableExtra::kable_styling()
 ```
 
-Además de *KLK3*, entre los datos se pueden encontrar otros marcadores de diagnóstico conocidos, como *AMACR* (`ENSG00000242110`) y *FOLH1* (`ENSG00000086205`). El rendimiento de estos marcadores puede comparase con los diversos índices, para así, contrastarlos en función relevancia clínica.
+Además de *KLK3*, entre los datos se pueden encontrar otros biomarcadores de diagnóstico conocidos, como *AMACR* (`ENSG00000242110`) y *FOLH1* (`ENSG00000086205`). El rendimiento de estos biomarcadores puede comparase con los diversos índices, para así, contrastarlos en función relevancia clínica.
 
 ```{r Marcadores de diagnostico alternativos, eval=FALSE}
 known_markers <- c(
@@ -1538,7 +1538,7 @@ Si nos centramos en esta zona, el $SpAUC$ califica al *AMACR* como el predictor 
 
 Contrastando estos resultados con otros estudios, tanto el *AMACR* como el *FOLH1* se encuentran sobrexpresados en pacientes con la enfermedad [@amacr-marker; @folh1-marker]. Sin embargo, *FOLH1* presenta un mayor interés, por además de su uso a nivel de diagnóstico, como diana terapéutica [@folh1-therapeutic]. Esto refuerza la interpretación dada por $TpAUC$, donde tanto *AMACR* y *FOLH1* presentan potencial como clasificadores, y en concreto este último, un rendimiento ligermante superior.
 
-Si se selecciona alguno los primeros marcadores identificados por el $TpAUC$, puede observarse que se encuentran relacionados con la enfermedad, por ejemplo *ESRP2* (`ENSG00000103067`), al cual estudios recientes lo describen por tener un papel relevante en el desarrollo de la enfermedad [@esrp2-marker].
+Si se selecciona alguno los primeros biomarcadores identificados por el $TpAUC$, puede observarse que se encuentran relacionados con la enfermedad, por ejemplo *ESRP2* (`ENSG00000103067`), al cual estudios recientes lo describen por tener un papel relevante en el desarrollo de la enfermedad [@esrp2-marker].
 
 ```{r Gen ESRP2, eval=FALSE}
 metrics_diagnostic_fpr$data %>%
@@ -1752,71 +1752,112 @@ metric_prognostic_tpr$data %>%
         identifier %in% decipher$ensemble
     )
 ```
-```{r decipher-oncotype-markers, echo=FALSE}
+```{r decipher-oncotype-markers, echo=FALSE, message=FALSE}
 decipher <- tibble::tribble(
-    ~name, ~ensemble,
-    "LASP1", "ENSG00000002834",
-    "IQGAP3", "ENSG00000183856",
-    "NFIB", "ENSG00000147862",
-    "S1PR4", "ENSG00000125910",
-    "THBS2", "ENSG00000186340",
-    "ANO7", "ENSG00000146205",
-    "PCDH7", "ENSG00000169851",
-    "MYBPC1", "ENSG00000196091",
-    "EPPK1", "ENSG00000261150",
-    "PBX1", "ENSG00000185630",
-    "NUSAP1", "ENSG00000137804",
-    "ZWILCH", "ENSG00000174442",
-    "UBE2C", "ENSG00000175063",
-    "CAMK2N1", "ENSG00000162545",
-    "RABGAP1", "ENSG00000011454",
-    "TNFRSF19", "ENSG00000127863"
+    ~name, ~ensemble, ~invert,
+    "LASP1", "ENSG00000002834", FALSE,
+    "IQGAP3", "ENSG00000183856", FALSE,
+    "NFIB", "ENSG00000147862", FALSE,
+    "S1PR4", "ENSG00000125910", FALSE,
+    "THBS2", "ENSG00000186340", FALSE,
+    "ANO7", "ENSG00000146205", FALSE,
+    "PCDH7", "ENSG00000169851", FALSE,
+    "MYBPC1", "ENSG00000196091", TRUE,
+    "EPPK1", "ENSG00000261150", FALSE,
+    "PBX1", "ENSG00000185630", FALSE,
+    "NUSAP1", "ENSG00000137804", FALSE,
+    "ZWILCH", "ENSG00000174442", FALSE,
+    "UBE2C", "ENSG00000175063", FALSE,
+    "CAMK2N1", "ENSG00000162545", FALSE,
+    "RABGAP1", "ENSG00000011454", FALSE,
+    "TNFRSF19", "ENSG00000127863", TRUE
 )
 
 oncotype <- tibble::tribble(
-    ~name, ~ensemble,
-    "BGN", "ENSG00000182492",
-    "COL1A1", "ENSG00000108821",
-    "SFRP4", "ENSG00000106483",
-    "FLNC", "ENSG00000128591",
-    "GSN", "ENSG00000148180",
-    "TPM2", "ENSG00000198467",
-    "GSTM2", "ENSG00000213366",
-    "TPX2", "ENSG00000088325",
-    "LAMB3", "ENSG00000196878",
-    "FAM13C", "ENSG00000148541",
-    "KLK2", "ENSG00000167751",
-    "AZGP1", "ENSG00000160862",
-    "SRD5A2", "ENSG00000277893",
-    "DUSP1", "ENSG00000120129",
-    "FOS", "ENSG00000170345"
+    ~name, ~ensemble, ~invert,
+    "BGN", "ENSG00000182492", FALSE,
+    "COL1A1", "ENSG00000108821", FALSE,
+    "SFRP4", "ENSG00000106483", FALSE,
+    "FLNC", "ENSG00000128591", FALSE,
+    "GSN", "ENSG00000148180", FALSE,
+    "TPM2", "ENSG00000198467", FALSE,
+    "GSTM2", "ENSG00000213366", FALSE,
+    "TPX2", "ENSG00000088325", FALSE,
+    "LAMB3", "ENSG00000196878", FALSE,
+    "FAM13C", "ENSG00000148541", FALSE,
+    "KLK2", "ENSG00000167751", TRUE,
+    "AZGP1", "ENSG00000160862", TRUE,
+    "SRD5A2", "ENSG00000277893", FALSE,
+    "DUSP1", "ENSG00000120129", FALSE,
+    "FOS", "ENSG00000170345", FALSE
 )
 
+pronostic_markers <- bind_rows(decipher, oncotype) %>%
+    dplyr::filter(ensemble %in% colnames(disease))
+
+disease <- disease %>%
+    mutate(
+        inv_prognostic = forcats::fct_recode(
+            prognostic, "1" = "0", "0" = "1"
+        ) %>% fct_relevel("0")
+    )
+
+results <- tibble(
+    identifier = character(),
+    auc = double(),
+    pauc = double(),
+    np_auc = double(),
+    fp_auc = double(),
+    curve_shape = character()
+)
+for (row in seq_len(nrow(pronostic_markers))) {
+    response <- "prognostic"
+    predictor <- pronostic_markers[[row, 2]]
+    if (pronostic_markers[row, 3] == TRUE) {
+        response <- "inv_prognostic"
+    }
+    result <- summarize_predictor(
+        data = disease,
+        predictor = .data[[predictor]],
+        response = all_of(response),
+        ratio = "tpr",
+        threshold = 0.9
+    ) %>% bind_cols(list(identifier = predictor))
+    results <- bind_rows(results, result)
+}
+
 kableExtra::kbl(
-    metric_prognostic_tpr$data %>%
-        arrange(desc(fp_auc)) %>%
-        filter(
-            identifier %in% oncotype$ensemble |
-            identifier %in% decipher$ensemble
-        )
+    results
 ) %>%
     kableExtra::kable_styling()
+
+# kableExtra::kbl(
+#     metric_prognostic_tpr$data %>%
+#         arrange(desc(fp_auc)) %>%
+#         filter(
+#             identifier %in% oncotype$ensemble |
+#             identifier %in% decipher$ensemble
+#         )
+# ) %>%
+#     kableExtra::kable_styling()
 ```
 
-Entre los datos, es posible encontrar marcadores utilizados en estos tests, los cuales presentan puntuaciones relativamente bajas, a excepción del $FpAUC$ que las puntúa en mejor medida. Contrastando estos resultados, se puede observar como el $FpAUC$ es más representativo de los marcadores actualmente utilizados en tests de estratificación de riesgos. Es más, entre los predictores con mayor $FpAUC$ se encuentra `ENSG00000112210` (*RAB23*), el cual se encuentra relacionado con la progresión de la enfermedad [@rab23-marker].
+Entre los datos, es posible encontrar biomarcadores utilizados en estos tests, los cuales presentan puntuaciones relativamente bajas, a excepción del $FpAUC$ que las puntúa en mejor medida[^5]. Contrastando estos resultados, se puede observar como el $FpAUC$ es más representativo de los biomarcadores actualmente utilizados en tests de estratificación de riesgos. Es más, entre los predictores con mayor $FpAUC$ se encuentra `ENSG00000112210` (*RAB23*), el cual se encuentra relacionado con la progresión de la enfermedad [@rab23-marker].
 
 ## Discusión y conclusiones
 
-El desarrollo de nuevas tecnologías permite el estudio simultáneo de un gran número de marcadores, donde los análisis basados en $AUC$ son habitualmente utilizados. En el ámbito clínico, regiones concretas de las curvas $ROC$ son más relevantes, principalmente para tratar con los costes y consecuencias de diagnósticos erróneos. De esta forma, las métricas que evalúan estas regiones, como el $pAUC$, están ganando mayor interés. A pesar de ello, esta métrica presenta limitaciones para su uso debido a su interpretabilidad, por lo que transformaciones alternativas para trabajar en estas regiones resultan de mayor utilidad.
+El desarrollo de nuevas tecnologías permite el estudio simultáneo de un gran número de biomarcadores, donde los análisis basados en $AUC$ son habitualmente utilizados. En el ámbito clínico, regiones concretas de las curvas $ROC$ son más relevantes, principalmente para tratar con los costes y consecuencias de diagnósticos erróneos. De esta forma, las métricas que evalúan estas regiones, como el $pAUC$, están ganando mayor interés. A pesar de ello, esta métrica presenta limitaciones para su uso debido a su interpretabilidad, por lo que transformaciones alternativas para trabajar en estas regiones resultan de mayor utilidad.
 
-En este trabajo se ha analizado el rendimiento de métricas derivadas del $pAUC$ en regiones de interés, para ello se ha utilizado un conjunto de datos generado con distintas muestras de cáncer de próstata. Las diferentes métricas han sido evaluadas en función de su capacidad para encontrar marcadores de diagnóstico y estratificación de riesgo, escenarios donde condiciones de alta especificidad y sensibilidad son requeridas.
+En este trabajo se ha analizado el rendimiento de métricas derivadas del $pAUC$ en regiones de interés, para ello se ha utilizado un conjunto de datos generado con distintas muestras de cáncer de próstata. Las diferentes métricas han sido evaluadas en función de su capacidad para encontrar biomarcadores de diagnóstico y estratificación de riesgo, escenarios donde condiciones de alta especificidad y sensibilidad son requeridas.
 
 Entre las métricas descritas, el $SpAUC$ fue la primera transformación del $pAUC$ descrita, la cual permite trabajar en regiones de alta especificidad. Esta métrica es fácilmente interpretable al comprender sus valores entre $0.5$ y $1$, sin embargo, no es aplicable a regiones de la curva $ROC$ descritas por debajo de la línea de azar. Estas regiones son comunes en la práctica, lo cual limita su uso en gran medida. Este problema ha sido resuelto por el $TpAUC$ la cual, además de tomar valores entre $0.5$ y $1$, puede aplicarse a regiones que pasen por debajo de la línea del azar.
 
 De forma similar, el $NpAUC$ fue propuesto para trabajar en regiones de alta sensibilidad. Esta métrica puede tomar valores máximos de $1$, pero al no estar limitada por debajo, también puede tomar valores inferiores a $0.5$, lo que dificulta su interpretación y aplicación a ciertos predictores. Estos problemas han sido resueltos por el $FpAUC$ el cual, además de contener sus valores entre $0.5$ y $1$, se puede aplicar independientemente de la forma de la curva.
 
-Además de presentar una mejor interpretabilidad, el $TpAUC$ y $FpAUC$ han sido capaces de distinguir entre predictores que presentan el mismo $pAUC$ y cuyas curvas $ROC$ se cruzan, algo que hasta ahora no había sido posible con las anteriores métricas. De esta forma, tanto el $TpAUC$ como el $FpAUC$ poseen una mayor capacidad de discriminación, permitiendo la selección de otros marcadores que convencionalmente se habrían descartado.
+Además de presentar una mejor interpretabilidad, el $TpAUC$ y $FpAUC$ han sido capaces de distinguir entre predictores que presentan el mismo $pAUC$ y cuyas curvas $ROC$ se cruzan, algo que hasta ahora no había sido posible con las anteriores métricas. De esta forma, tanto el $TpAUC$ como el $FpAUC$ poseen una mayor capacidad de discriminación, permitiendo la selección de otros biomarcadores que convencionalmente se habrían descartado.
 
-Finalmente, para considerar la relevancia clínica de las métricas, los resultados obtenidos se han contrastado con predictores relevantes en el ámbito clínico. Con respecto a marcadores de diagnóstico, el $TpAUC$ otorga puntuaciones similares a los 2 marcadores de mayor interés actualmente, a diferencia del $SpAUC$ que penaliza a uno de ellos. En condiciones de estratificación de riesgo, el $NpAUC$ presenta valores muy bajos para predictores que actualmente se utilizan en tests de estratificación de riesgo, a diferencia del $FpAUC$ que les otorga puntuaciones mayores. 
+Finalmente, para considerar la relevancia clínica de las métricas, los resultados obtenidos se han contrastado con predictores relevantes en el ámbito clínico. Con respecto a biomarcadores de diagnóstico, el $TpAUC$ otorga puntuaciones similares a los 2 biomarcadores de mayor interés actualmente, a diferencia del $SpAUC$ que penaliza a uno de ellos. En condiciones de estratificación de riesgo, el $NpAUC$ presenta valores muy bajos para predictores que actualmente se utilizan en tests de estratificación de riesgo, a diferencia del $FpAUC$ que les otorga puntuaciones mayores. 
 
-Estos resultados revelan la utilidad práctica del $TpAUC$ y $FpAUC$ frente al resto. Su facilidad para ser interpretadas y capacidad de discriminar entre marcadores altamente específicos o sensibles incentiva su uso en el ámbito clínico, permitiendo la selección de marcadores que puedan ayudar en la toma de decisiones.
+Estos resultados revelan la utilidad práctica del $TpAUC$ y $FpAUC$ frente al resto. Su facilidad para ser interpretadas y capacidad de discriminar entre biomarcadores altamente específicos o sensibles incentiva su uso en el ámbito clínico, permitiendo la selección de biomarcadores que puedan ayudar en la toma de decisiones.
+
+[^5]: Las curvas $ROC$ de los biomarcadores ENSG00000196091, ENSG00000127863, ENSG00000167751 y ENSG00000160862 fueron invertidas a la hora de realizar los cálculos. Esto se debe a que, en los tests, la expresión reducida de estos biomarcadores está relacionada con un peor pronóstico, en lugar de su sobrexpresión.

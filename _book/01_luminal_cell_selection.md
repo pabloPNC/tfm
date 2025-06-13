@@ -1,8 +1,8 @@
-# (PART) Búsqueda de marcadores {-}
+# (PART) Búsqueda de biomarcadores {-}
 
 # Selección de células luminales de prostata {#luminal-cells-selection}
 
-En esta sección se identificarán y seleccionarán células luminales de próstata, precursoras de la enfermedad, que posteriormente se usarán para identificar marcadores de la enfermedad. Para ello se utilizarán los datos de experimentos de scRNA-seq obtenidos de muestras de pacientes con la enfermedad [@base].
+En esta sección se identificarán y seleccionarán células luminales de próstata, precursoras de la enfermedad, que posteriormente se usarán para identificar biomarcadores de la enfermedad. Para ello se utilizarán los datos de experimentos de scRNA-seq obtenidos de muestras de pacientes con la enfermedad [@base].
 
 
 
@@ -38,7 +38,7 @@ GSM4773522_PCa1_counts_matrix <- import_gene_counts(
 
 ## Preprocesamiento y CQ
 
-Para realizar el análisis se utilizará el paquete **Seurat**, el cual proveerá las herramientas necesarias para llevar a cabo la selección de marcadores, así como de células de interés [@R-Seurat].
+Para realizar el análisis se utilizará el paquete **Seurat**, el cual proveerá las herramientas necesarias para llevar a cabo la selección de biomarcadores, así como de células de interés [@R-Seurat].
 
 ### Creación del objeto Seurat
 
@@ -169,7 +169,7 @@ seurat_objects <- ScaleData(
 
 Como se ha expresado previamente, el conjunto de datos tiene un alto número de variables y por tanto es conveniente aplicar técnicas de reducción de la dimensionalidad para trabajar con él. Por este motivo se realizará un análisis de componentes principales (PCA) sobre los datos ya escalados.
 
-Para aplicar esta técnica **Seurat** provee la función `RunPCA` donde, de forma similar a la sección anterior, se especificarán los genes de mayor variabilidad (`features`), dado que serán estos con los que se desea trabajar.
+Para aplicar esta técnica, **Seurat** provee la función `RunPCA` donde, de forma similar a la sección anterior, se especificarán los genes de mayor variabilidad (`features`), dado que serán estos con los que se desea trabajar.
 
 
 ```r
@@ -361,23 +361,23 @@ significative_markers %>%
 ```
 
 
-|         | p_val| avg_log2FC| pct.1| pct.2| p_val_adj|cluster |gene  |
-|:--------|-----:|----------:|-----:|-----:|---------:|:-------|:-----|
-|KRT8.10  |     0|   3.427157| 0.991| 0.278| 0.0000000|14      |KRT8  |
-|KRT18.10 |     0|   3.166531| 0.963| 0.311| 0.0000000|14      |KRT18 |
-|KRT18.4  |     0|   2.569782| 0.638| 0.315| 0.0000000|7       |KRT18 |
-|KRT8.4   |     0|   2.068169| 0.489| 0.290| 0.0000000|7       |KRT8  |
-|KRT8.5   |     0|   1.968036| 0.800| 0.276| 0.0000000|8       |KRT8  |
-|KRT18.5  |     0|   1.912306| 0.831| 0.307| 0.0000000|8       |KRT18 |
-|KRT18.9  |     0|  -1.098934| 0.042| 0.342| 0.0000048|13      |KRT18 |
-|KRT8.2   |     0|  -1.778397| 0.136| 0.316| 0.0000379|3       |KRT8  |
-|KRT8.9   |     0|  -1.903370| 0.025| 0.310| 0.0000051|13      |KRT8  |
-|KRT8.1   |     0|  -1.980353| 0.119| 0.318| 0.0000001|2       |KRT8  |
-|KRT8.3   |     0|  -2.077888| 0.154| 0.313| 0.0011345|5       |KRT8  |
-|KRT18.2  |     0|  -2.251485| 0.123| 0.352| 0.0000000|3       |KRT18 |
-|KRT18.1  |     0|  -2.290610| 0.106| 0.353| 0.0000000|2       |KRT18 |
-|KRT18.3  |     0|  -2.345639| 0.157| 0.347| 0.0000027|5       |KRT18 |
-|KRT18.8  |     0|  -2.448954| 0.114| 0.340| 0.0012341|12      |KRT18 |
+|         |     p_val| avg_log2FC| pct.1| pct.2| p_val_adj|cluster |gene  |
+|:--------|---------:|----------:|-----:|-----:|---------:|:-------|:-----|
+|KRT8.10  | 2.810e-88|   3.427157| 0.991| 0.278| 7.291e-84|14      |KRT8  |
+|KRT18.10 | 2.285e-75|   3.166531| 0.963| 0.311| 5.929e-71|14      |KRT18 |
+|KRT18.4  | 5.079e-37|   2.569782| 0.638| 0.315| 1.318e-32|7       |KRT18 |
+|KRT8.4   | 3.345e-17|   2.068169| 0.489| 0.290| 8.681e-13|7       |KRT8  |
+|KRT8.5   | 5.167e-63|   1.968036| 0.800| 0.276| 1.341e-58|8       |KRT8  |
+|KRT18.5  | 3.253e-61|   1.912306| 0.831| 0.307| 8.442e-57|8       |KRT18 |
+|KRT18.9  | 1.859e-10|  -1.098934| 0.042| 0.342| 4.824e- 6|13      |KRT18 |
+|KRT8.2   | 1.460e- 9|  -1.778397| 0.136| 0.316| 3.790e- 5|3       |KRT8  |
+|KRT8.9   | 1.951e-10|  -1.903370| 0.025| 0.310| 5.062e- 6|13      |KRT8  |
+|KRT8.1   | 5.140e-12|  -1.980353| 0.119| 0.318| 1.334e- 7|2       |KRT8  |
+|KRT8.3   | 4.372e- 8|  -2.077888| 0.154| 0.313| 1.134e- 3|5       |KRT8  |
+|KRT18.2  | 1.375e-14|  -2.251485| 0.123| 0.352| 3.568e-10|3       |KRT18 |
+|KRT18.1  | 3.994e-17|  -2.290610| 0.106| 0.353| 1.036e-12|2       |KRT18 |
+|KRT18.3  | 1.026e-10|  -2.345639| 0.157| 0.347| 2.663e- 6|5       |KRT18 |
+|KRT18.8  | 4.756e- 8|  -2.448954| 0.114| 0.340| 1.234e- 3|12      |KRT18 |
 
 Al ordenar los resultados por su `avg_log2FC` y `pct.1`, con la función `dplyr::arrange`, se observa que tanto *KRT8* y *KR18* se expresan en los mismos clusters. En concreto, en los clusters 8 y 14, los genes se encuentran en un alto porcentaje de las células y además con niveles de expresión relativamente altos. Para el caso del cluster 7, aunque presente niveles de expresión ligeramente superiores a los del cluster 8, no será seleccionado al presentar un porcentaje de expresión detectable muy bajo.
 

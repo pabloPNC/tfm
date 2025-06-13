@@ -19,7 +19,7 @@ significative_markers <- readRDS("./rds_objects/01_significative_markers.rds")
 
 Los tejidos de cáncer de próstata presentan una gran heterogeneidad, incluso entre células del mismo tipo [@tumor-heterogeneity], por este motivo es conveniente realizar una búsqueda de subpoblaciones en el conjunto de datos seleccionado. Esta búsqueda más detallada permite revelar información según los genes que expresen estas subpoblaciones, algunos ejemplos:
 
-+ **Poblaciones con roles específicos**\. Marcadores diferencialmente expresados, dentro de un mismo tipo celular, pueden ser indicativos de subpoblaciones que realicen funciones específicas en el desarrollo de la enfermedad.
++ **Poblaciones con roles específicos**\. Genes diferencialmente expresados, dentro de un mismo tipo celular, pueden ser indicativos de subpoblaciones que realicen funciones específicas en el desarrollo de la enfermedad.
 + **Estado de las células**\. La presencia de ciertos marcadores puede indicar el estado en el que se encuentra un célula, e.g. células malignas o en proceso de carcinogénesis.
 
 ### Caracterización y selección de los clusters
@@ -40,7 +40,7 @@ markers_cluster_14 <- FindMarkers(
 )
 ```
 
-Realizada la búsqueda de marcadores, se seleccionarán aquellos resultados significativos. Además, para trabajar de forma más cómoda con ellos, se fusionarán en una sola tabla con la función `dplyr::bind_rows` y añadirá una nueva columna con el nombre de estos genes (`tibble::rownames_to_column`).
+Realizada la búsqueda de biomarcadores, se seleccionarán aquellos resultados significativos. Además, para trabajar de forma más cómoda con ellos, se fusionarán en una sola tabla con la función `dplyr::bind_rows` y añadirá una nueva columna con el nombre de estos genes (`tibble::rownames_to_column`).
 
 ```{r Filtrado de marcadores significativos}
 markers_cluster_8 <- markers_cluster_8 %>%
@@ -56,7 +56,7 @@ markers_cluster_14 <- markers_cluster_14 %>%
 markers <- bind_rows(markers_cluster_8, markers_cluster_14)
 ```
 
-Tras seleccionar los genes expresados diferencialmente en cada uno de los clusters, se pueden identificar marcadores de relevancia en la enfermedad. Para visualizarlos de forma más simple y contrastar su expresión en ambos clusters, estos genes serán preseleccionados y ordenados por su nombre.
+Tras seleccionar los genes expresados diferencialmente en cada uno de los clusters, se pueden identificar biomarcadores de relevancia en la enfermedad. Para visualizarlos de forma más simple y contrastar su expresión en ambos clusters, estos genes serán preseleccionados y ordenados por su nombre.
 
 ```{r Selección de genes relevantes en la enfermedad, eval=FALSE}
 genes <- c(
@@ -81,7 +81,8 @@ genes <- c(
 
 filtered_markers <- markers %>%
     filter(gene %in% genes) %>%
-    arrange(gene)
+    arrange(gene) %>%
+    mutate(across(c(p_val, p_val_adj), ~num(.x, digits = 3, notation = "sci")))
 
 DT::datatable(
     filtered_markers,
@@ -92,10 +93,11 @@ DT::datatable(
         scrollX = TRUE
     )
 ) %>%
-    DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
+    # DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
+    DT::formatSignif(columns = c("p_val", "avg_log2FC", "p_val_adj"), digits = 3)
 ```
 
-Entre los genes del cluster 8 es posible encontrar *FOLH1*, *NPY* y *KLK3*, genes identificados como marcadores de cáncer de próstata [@folh1-marker; @npy-marker], en contraste con el cluster 14 donde se encuentran menos expresados. Además, los genes *LXN* y *SLPI*, identificados como supresores de la enfermedad [@slpi-marker; @lxn-marker], se encuentran expresados en el cluster 14. Finalmente, el cluster 14 también expresa genes presentes en pacientes con la enfermedad como: *AGR2*, un marcador de orina de la enfermedad [@agr2-marker], además de *CXCL1* y *DKK1* marcadores relacionados con la progresión de la enfermedad e invasividad de los tumores [@dkk1-marker; @cxcl1-marker].
+Entre los genes del cluster 8 es posible encontrar *FOLH1*, *NPY* y *KLK3*, genes identificados como biomarcadores de cáncer de próstata [@folh1-marker; @npy-marker], en contraste con el cluster 14 donde se encuentran menos expresados. Además, los genes *LXN* y *SLPI*, identificados como supresores de la enfermedad [@slpi-marker; @lxn-marker], se encuentran expresados en el cluster 14. Finalmente, el cluster 14 también expresa genes presentes en pacientes con la enfermedad como: *AGR2*, un biomarcador de orina de la enfermedad [@agr2-marker], además de *CXCL1* y *DKK1* biomarcadores relacionados con la progresión de la enfermedad e invasividad de los tumores [@dkk1-marker; @cxcl1-marker].
 
 Estas observaciones implican que ambos cluster contienen células con cierto grado de malignidad. Sin embargo, dado que las células del cluster 14 expresan genes supresores de la enfermedad, puede intuirse que se corresponden con células de próstata normales que están sufriendo un proceso de carcinogénesis.
 
@@ -195,7 +197,7 @@ DimPlot(
 
 ### Interpretación de resultados
 
-En la figura \@ref(fig:umap-cluster8) es posible observar 2 subgrupos relativamente bien separados. Una posible causa para su formación podría ser la heterogeneidad de las células cancerosas, como se ha explicado previamente en la sección \@ref(deg-luminal-cells). Por este motivo, es conveniente indentificar de nuevo marcadores diferenciados que arrojen algo de luz sobre el papel de cada una de estas posibles subpoblaciones.
+En la figura \@ref(fig:umap-cluster8) es posible observar 2 subgrupos relativamente bien separados. Una posible causa para su formación podría ser la heterogeneidad de las células cancerosas, como se ha explicado previamente en la sección \@ref(deg-luminal-cells). Por este motivo, es conveniente indentificar de nuevo genes diferenciados que arrojen algo de luz sobre el papel de cada una de estas posibles subpoblaciones.
 
 ```{r Búsqueda de marcadores en subpoblaciones, eval=FALSE}
 all_subpopulation_markers <- FindAllMarkers(
@@ -206,7 +208,8 @@ all_subpopulation_markers
 ```{r table-malignant-markers, echo=FALSE, message=FALSE, warning=FALSE}
 all_subpopulation_markers <- FindAllMarkers(
     malignant_luminal_cells
-)
+) %>%
+    mutate(across(c(p_val, p_val_adj), ~num(.x, digits = 3, notation = "sci")))
 
 DT::datatable(
     all_subpopulation_markers,
@@ -216,7 +219,8 @@ DT::datatable(
         lengthChange = FALSE
     )
 ) %>%
-    DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
+    # DT::formatRound(c("p_val", "avg_log2FC", "p_val_adj"), 3)
+    DT::formatSignif(columns = c("p_val", "avg_log2FC", "p_val_adj"), digits = 3)
 ```
 
 Una primera exploración sobre los DEG no revela información sobre el papel de los 2 subclusters identificados, por ello para intentar averiguar funciones concretas de los cluster se ha realizado un enriquecimiento funcional utilizando la herramienta provista por ["The Gene Ontology consortium"](https://geneontology.org/). Para este proceso, solamente los genes con un `avg_log2FC` superior a $1$ y `p_val_adj` igual o inferior a $0.05$ han sido sido seleccionados.
@@ -229,9 +233,9 @@ La formación de clusters no deja de ser un proceso matemático que se aplica al
 
 Trasladado a este caso, el cluster 8 ya contaba con un número bajo de células, con las cuales sí que se ha podido contrastar que se trataban de células luminales de próstata con cierta malignidad. Al volver a aplicar las técnicas de clustering y no poder validar las subpoblaciones obtenidas, se seguirá trabajando con el cluster 8 en su totalidad.
 
-## Selección de marcadores
+## Selección de biomarcadores
 
-Una vez decidido que se trabajará con el cluster 8 en su totalidad se seleccionarán los marcadores de este grupo para su uso en análisis posteriores. Por este motivo, se seleccionarán los DEG sobreexpresados con respecto a los demás clusters (`avg_log2FC` > 1).
+Una vez decidido que se trabajará con el cluster 8 en su totalidad se seleccionarán los biomarcadores de este grupo para su uso en análisis posteriores. Por este motivo, se seleccionarán los DEG sobreexpresados con respecto a los demás clusters (`avg_log2FC` > 1).
 
 ```{r DEG cluster 8}
 markers_cluster_8 <- significative_markers %>%

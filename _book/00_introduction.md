@@ -1,20 +1,20 @@
 # Introducción {-}
 
-Los avances en tecnologías de alto rendimiento están permitiendo la identificación simultánea de un gran número de clasificadores para ayudar en la toma de decisiones de procesos relevantes. Las curvas de características operativas de receptor ($ROC$), y especialmente el área bajo las curvas $ROC$ ($AUC$), son herramientas útiles para evaluar y comparar el rendimiento de estos clasificadores en aplicaciones biomédicas y bioinformáticas.
+Los avances en tecnologías de alto rendimiento están permitiendo la identificación simultánea de un gran número de biomarcadores para ayudar en la toma de decisiones de procesos relevantes. Las curvas de características operativas de receptor ($ROC$), y especialmente el área bajo las curvas $ROC$ ($AUC$), son herramientas útiles para evaluar y comparar el rendimiento de estos biomarcadores en aplicaciones biomédicas y bioinformáticas.
 
-De esta forma, se puede describir la utilidad del clasificador para evaluar procesos discriminatorios, e.g. clasificando enfermedades con biomarcadores y paneles de expresión, seleccionando genes diferencialemente expresados en experimentos, etcétera. Es más, actualmente se han desarrollado diversos paquetes de software estadístico que facilitan el análisis utilizando estas curvas $ROC$.
+Con estas herramientas, es posible describir la utilidad del biomarcador para evaluar procesos discriminatorios, e.g. detección de enfermedades a través de biomarcadores, selección de genes diferencialmente expresados en experimentos de microarrays, etcétera. Es más, actualmente se han desarrollado diversos paquetes de software estadístico que facilitan el análisis utilizando estas curvas $ROC$.
 
-Sin embargo, cuando una tarea requiere de una determinada precisión, el $AUC$ no es un índice significativo del rendimiento del clasificador. Así, nuevas herramientas analíticas han sido propuestas y ampliamente usadas en investigación bajo rangos preestablecidos de especificidad y sensibilidad, sin embargo hasta ahora los métodos basados en curvas $ROC$ no han sido sensibles cuando existen puntos que se cruzan en distintas curvas.
+Sin embargo, cuando una tarea requiere de una determinada precisión, el $AUC$ total no es un índice significativo del rendimiento del biomarcador. Así, nuevas herramientas analíticas han sido propuestas y ampliamente utilizadas en investigación bajo rangos preestablecidos de especificidad y sensibilidad. Sin embargo, hasta ahora, estos métodos han presentado diversas limitaciones, entre ellas, no han sido sensibles al comparar curvas $ROC$ de biomarcadores que se cruzan, siendo esto un indicativo de su baja capacidad de discriminación.
 
-El objetivo de este trabajo es estudiar índices de áreas parciales los cuales permiten comparar porciones de estas curvas $ROC$, así como su utilidad en aplicaciones biomédicas y bioinformáticas.
+De este modo, el objetivo de este trabajo es estudiar diversos índices de áreas parciales los cuales permiten comparar porciones de estas curvas $ROC$, así como su utilidad en aplicaciones biomédicas y bioinformáticas.
 
 ## Conjuntos de datos {-}
 
-En la evaluación de los distintos índices se utilizarán muestras de pacientes con cáncer de próstata (PCa), puesto que esta enfermedad presenta un escenario dónde estudiar regiones de las curvas $ROC$ es necesario. Resultados de experimentos de *single cell RNA sequencing* (scRNA-seq) se utilizarán para la selección de marcadores relevantes en la enfermedad. Seleccionados los marcadores, sus niveles de expresión se contrastarán con muestras de pacientes enfermos en experimentos *bulk RNA sequencing* (RNA-seq).
+En la evaluación de los distintos índices se utilizarán muestras de pacientes con cáncer de próstata (PCa), puesto que esta enfermedad presenta un escenario dónde estudiar regiones de las curvas $ROC$ es necesario. Resultados de experimentos de *single cell RNA sequencing* (scRNA-seq) se utilizarán para la selección de biomarcadores relevantes en la enfermedad. Seleccionados los biomarcadores, sus niveles de expresión se contrastarán con muestras de pacientes enfermos en experimentos *bulk RNA sequencing* (RNA-seq).
 
 Los datos del experimento de scRNA-seq provienen de muestras de 2 pacientes diagnosticados con PCa. Este diagnóstico fue realizado a través de observaciones morfológicas (puntuaciones de Gleason de 6 y 7) y ante la presencia de marcadores de la enfermedad, *AMACR* y *TP63*. Los conjuntos de datos en crudo y procesados se encuentran disponibles en *Gene Expression Omnibus* (GEO) bajo el identificador [GSE157703](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE157703).
 
-Los conjuntos de datos utilizados para contrastar los marcadores fueron extraídos de *The Cancer Genome Atlas* (TCGA), considerando aquellos provenientes de tejidos de próstata y experimentos de RNA-seq[^1].
+Los conjuntos de datos utilizados para contrastar los biomarcadores fueron extraídos de *The Cancer Genome Atlas* (TCGA), considerando aquellos provenientes de tejidos de próstata y experimentos de RNA-seq[^1].
 
 ## Software utilizado {-}
 
@@ -44,7 +44,7 @@ Las librerías externas utilizadas se pueden agrupar según su uso dado durante 
 
 ### Librerías propias {-}
 
-Además de las librerías externas mencionadas, para facilitar el análisis de índices derivados de áreas parciales se ha desarrollado la librería **ROCnGO**. Esta librería además de proveer herramientas para el cálculo de los índices anteriormente comentados, también permite aplicar estos cálculos al conjunto de datos entero automatizando en gran medida la tarea. La librería también incluye otros dos índices derivados adicionales, el $NpAUC$ y el $FpAUC$, que también se tratarán más adelante. Finalmente, también incluye herramientas para graficar este tipo de curvas y las regiones en las que se encuentran comprendidas utilizando una sintaxis sencilla, lo que facilita la comparación de clasificadores.
+Además de las librerías externas mencionadas, para facilitar el análisis de índices derivados de áreas parciales, se ha desarrollado la librería **ROCnGO**. Esta librería además de proveer herramientas para el cálculo de los índices anteriormente comentados, también permite aplicar estos cálculos al conjunto de datos entero automatizando en gran medida la tarea. La librería también incluye otros dos índices adicionales, el $NpAUC$ y el $FpAUC$, que también se tratarán más adelante. Finalmente, esta también incluye herramientas para graficar este tipo de curvas y las regiones en las que se encuentran comprendidas utilizando una sintaxis sencilla, lo que facilita la comparación de los biomarcadores de estudio.
 
 Actualmente la librería se puede obtener a través de su repositorio de [GitHub](https://github.com/pabloPNC/ROCnGO) utilizando la siguiente función.
 
@@ -57,11 +57,11 @@ devtools::install_github(repo = "pabloPNC/ROCnGO")
 
 ## Estructura {-}
 
-La primera parte del trabajo se centrará en encontrar marcadores expresados específicamente en células cancerosas. En la Sección \@ref(luminal-cells-selection), utilizando los datos de experimentos de scRNA-seq, se identificarán las células del tejido que se corresponden con células luminales de próstata, las precursoras de la enfermedad. En la Sección \@ref(cancer-cells-selection) se identificarán las células malignas entre las seleccionadas previamente así como los marcadores que expresan.
+La primera parte del trabajo se centrará en encontrar biomarcadores expresados específicamente en células cancerosas. En la Sección \@ref(luminal-cells-selection), utilizando los datos de experimentos de scRNA-seq, se identificarán las células del tejido que se corresponden con células luminales de próstata, las precursoras de la enfermedad. En la Sección \@ref(cancer-cells-selection) se identificarán las células malignas entre las seleccionadas previamente así como los genes que expresan.
 
-En la segunda parte del trabajo se generará el conjunto de datos sobre el que se analizarán los distintos clasificadores. En la Sección \@ref(count-matrix-generation) se procesarán los datos del TCGA para generar una matriz de cuentas que incluirá los genes expresados en diversas muestras de tejido. En la Sección \@ref(count-matrix-filtering) se filtrará esta matriz para seleccionar los genes indentificados en la primera parte, de esta forma se obtendrá una matriz que solamente contendrá clasificadores relevantes para la enfermedad, eliminando ruido en el proceso.
+En la segunda parte del trabajo se generará el conjunto de datos sobre el que se analizarán los distintos biomarcadores. En la Sección \@ref(count-matrix-generation) se procesarán los datos del TCGA para generar una matriz de conteo que incluirá los genes expresados en diversas muestras de tejido. En la Sección \@ref(count-matrix-filtering) se filtrará esta matriz para seleccionar los genes indentificados en la primera parte, de esta forma se obtendrá una matriz que solamente contendrá biomarcadores relevantes para la enfermedad, eliminando ruido en el proceso.
 
-Finalmente en la tercera parte del trabajo (Sección \@ref(index-evaluation)), se calcularán y analizarán los distintos índices para los clasificadores seleccionados en regiones de alta sensibilidad y especificidad de la curva. En la sección también se expondrán las limitaciones de estos índices, para finalmente evaluar su utilidad como métrica considerando clasificadores que actualmente son utilizados en el ámbito clínico.
+Finalmente en la tercera parte del trabajo (Sección \@ref(index-evaluation)), se calcularán y analizarán los distintos índices para los biomarcadores seleccionados en regiones de alta sensibilidad y especificidad de la curva. En la sección, también se expondrán las limitaciones de estos índices, para finalmente evaluar su utilidad como métrica considerando biomarcadores que actualmente son utilizados en el ámbito clínico.
 
 
 [^1]: Además de los criterios indicados, solo se consideraron los datos depositados previamente a la última fecha de consulta (11/06/24).

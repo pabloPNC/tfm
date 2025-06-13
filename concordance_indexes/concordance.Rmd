@@ -1,0 +1,165 @@
+# Evaluación de índices de concordancia
+
+```{r}
+library(tidyverse)
+library(purrr)
+library(ROCnGO)
+library(patchwork)
+```
+
+```{r}
+# Analysis environment load
+load("./temp/auc_indexes_env.RData")
+```
+
+## Calculo de índices de concordancia
+
+### Diagnóstico
+
+```{r, message=FALSE}
+diagnostic_dataset <- diagnostic_dataset %>%
+  mutate(disease = roc_data$disease)
+```
+
+```{r}
+cpauc_sp_diagnostic <- map_dbl(
+  colnames(diagnostic_dataset %>% select(!disease)),
+  \(gene) {
+    ROCnGO::cp_auc(
+      data = diagnostic_dataset,
+      predictor = .data[[gene]],
+      response = .data[["disease"]],
+      lower_threshold = 0,
+      upper_threshold = 0.1,
+      ratio = "fpr"
+    )
+  },
+  .progress = TRUE
+)
+```
+
+```{r, message=FALSE}
+ncpauc_sp_diagnostic <- map_dbl(
+  colnames(diagnostic_dataset %>% select(!disease)),
+  \(gene) {
+    ROCnGO::ncp_auc(
+      data = diagnostic_dataset,
+      predictor = .data[[gene]],
+      response = .data[["disease"]],
+      lower_threshold = 0,
+      upper_threshold = 0.1
+    )
+  },
+  .progress = TRUE
+)
+```
+
+```{r}
+concordance_results <- tibble::tibble(
+  predictor = colnames(diagnostic_dataset %>% select(!disease)),
+  cpauc = cpauc_sp_diagnostic,
+  ncpauc = ncpauc_sp_diagnostic,
+)
+```
+
+```{r}
+diagnostic_results <- left_join(
+  x = metrics_diagnostic_fpr$data,
+  y = concordance_results,
+  by = join_by(identifier == predictor)
+)
+```
+
+### Pronóstico
+
+```{r}
+prognostic_df <- roc_data %>%
+  filter(disease == 1) %>%
+  select(starts_with("ENSG") | prognostic)
+```
+
+```{r}
+cpauc_sn_prognostic <- map_dbl(
+  colnames(prognostic_df %>% select(!prognostic)),
+  \(gene) {
+    cp_auc(
+      data = prognostic_df,
+      predictor = .data[[gene]],
+      response = .data[["prognostic"]],
+      lower_threshold = 0.9,
+      upper_threshold = 1,
+      ratio = "tpr"
+    )
+  },
+  .progress = TRUE
+)
+```
+
+```{r}
+ncpauc_sn_prognostic <- map_dbl(
+  colnames(prognostic_df %>% select(!prognostic)),
+  \(gene) {
+    ncp_auc(
+      data = prognostic_df,
+      predictor = .data[[gene]],
+      response = .data[["prognostic"]],
+      lower_threshold = 0.9,
+      upper_threshold = 1,
+      ratio = "tpr"
+    )
+  },
+  .progress = TRUE
+)
+```
+
+```{r}
+prognostic_concordance_results <- tibble(
+  predictor = colnames(prognostic_df %>% select(!prognostic)),
+  cpauc = cpauc_sn_prognostic,
+  ncpauc = ncpauc_sn_prognostic,
+)
+```
+
+```{r}
+prognostic_results <- left_join(
+  x = metric_prognostic_tpr$data,
+  y = prognostic_concordance_results,
+  by = join_by(identifier == predictor)
+)
+```
+
+## Cálculo de desempates
+
+```{r}
+# Define function for unties
+summarize_unties <- function(.data) {
+  # filter pauc > 0 and groups with eq pauc
+  df <- .data %>%
+    filter(pauc > 0) %>%
+    group_by(pauc) %>%
+    filter(n() > 1)
+  # Check if all elements in group are equal
+  df <- df %>% mutate(
+    ncpauc_eq = all(
+      map_lgl(ncpauc, \(x) near(x, ncpauc[[1]]))
+    )
+  )
+  # count groups
+  df <- df %>% summarize(
+    ncpauc_eq = all(ncpauc_eq)
+  ) %>%
+    count(ncpauc_eq)
+  df
+}
+``` 
+
+### Diagnóstico
+
+```{r}
+summarize_unties(diagnostic_results)
+```
+
+### Pronóstico
+```{r}
+summarize_unties(prognostic_results)
+```

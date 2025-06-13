@@ -1,8 +1,8 @@
 # (PART) Generación del conjunto de datos {-}
 
-# Generación de la matriz de cuentas {#count-matrix-generation}
+# Generación de la matriz de conteo {#count-matrix-generation}
 
-En esta sección se trabajará con datos de experimentos de RNA-seq, los cuales han sido extraídos de TCGA, para generar una matriz de cuentas con genes expresados en la enfermedad. Esta matriz será procesada en pasos posteriores para finalmente ser utilizada para evaluar el rendimiento de los diversos índices.
+En esta sección se trabajará con datos de experimentos de RNA-seq, los cuales han sido extraídos de TCGA, para generar una matriz de conteo con genes expresados en la enfermedad. Esta matriz será procesada en pasos posteriores para finalmente ser utilizada para evaluar el rendimiento de los diversos índices.
 
 
 
@@ -43,7 +43,7 @@ tcga_data_folder <- "./tcga_data/gdc_download_20240611_200434.803317"
 file_clinical_path <- "./file_clinical_sheet.csv"
 ```
 
-## Creación de matriz de cuentas
+## Creación de matriz de conteo
 
 Como se ha descrito en el apartado anterior, se está trabajando con un gran número de archivos de lecturas. De forma similar a metadatos y datos clínicos, los archivos de lecturas pueden combinarse para facilitar su acceso a ellos, pero para realizar este proceso se ha de entender la estructura que presentan.
 
@@ -103,7 +103,7 @@ $$
     (\#eq:normalization-metrics)
 \end{equation}
 
-Identificadas las variables a utilizar, es posible definir una función para automatizar el proceso. La función `rename_col` utilizará como entrada una matriz de cuentas (`data`) y un nombre que se le provea (`sample_id`), con ellos renombrará la columna `tpm_unstranded` al nombre especificado, más adelante se utilizará para indicar el identificador de la muestra. Finalmente, seleccionará dicha columna junto con la que contiene los identificadores de los genes.
+Identificadas las variables a utilizar, es posible definir una función para automatizar el proceso. La función `rename_col` utilizará como entrada una matriz de conteo (`data`) y un nombre que se le provea (`sample_id`), con ellos renombrará la columna `tpm_unstranded` al nombre especificado, más adelante se utilizará para indicar el identificador de la muestra. Finalmente, seleccionará dicha columna junto con la que contiene los identificadores de los genes.
 
 
 ```r
@@ -119,7 +119,7 @@ rename_col <- function(data, sample_id) {
 
 Estando automatizada la lectura de archivos y selección de variables de interés, solamente falta automatizar el proceso para unir estos archivos. Para esta tarea, se define `join_count_matrices`. 
 
-La función tomará como entrada 2 matrices de cuentas (`count_matrix_a` y `count_matrix_b`) y utilizará los identificadores de los genes (`gene_id`) para realizar su unión. De esta forma, si hay genes identificados en la segunda matriz que no están en la primera, se añadirá una nueva fila para dicho gen. En caso de que un gen exista en la primera matriz, las cuentas se colocarán en la fila adecuada. De esta forma la función devolverá una matriz donde cada fila se corresponderá a un gen concreto, mientras que cada columna a una muestra.
+La función tomará como entrada 2 matrices de conteo (`count_matrix_a` y `count_matrix_b`) y utilizará los identificadores de los genes (`gene_id`) para realizar su unión. De esta forma, si hay genes identificados en la segunda matriz que no están en la primera, se añadirá una nueva fila para dicho gen. En caso de que un gen exista en la primera matriz, las cuentas se colocarán en la fila adecuada. De esta forma la función devolverá una matriz donde cada fila se corresponderá a un gen concreto, mientras que cada columna a una muestra.
 
 
 ```r
@@ -132,7 +132,7 @@ join_count_matrices <- function(count_matrix_a, count_matrix_b) {
 }
 ```
 
-### Construcción de la matriz de cuentas
+### Construcción de la matriz de conteo
 
 Creadas las funciones para el flujo de trabajo, simplemente basta con poder aplicarlas a cada uno de los archivos de lecturas. Para que la tarea sea más sencilla, se realizará en primer lugar el preprocesado de los archivos y tras ello su unión.
 
@@ -175,7 +175,7 @@ Preprocesados los archivos de lecturas, el siguiente pasó será realizar la uni
 1. La función se aplica al nuevo resultado y al siguiente elemento del vector.
 1. El paso anterior se repite hasta que no queden más elementos en el vector.
 
-De esta forma, cuando se aplica `reduce` con la función `join_count_matrices`, se realizarán uniones de los ficheros de forma consecutiva hasta obtener una única matriz de cuentas.
+De esta forma, cuando se aplica `reduce` con la función `join_count_matrices`, se realizarán uniones de los ficheros de forma consecutiva hasta obtener una única matriz de conteo.
 
 
 ```r
@@ -183,11 +183,11 @@ merged_matrices <- as.data.frame(purrr::reduce(count_matrices, join_count_matric
 rownames(merged_matrices) <- merged_matrices$gene_id
 ```
 
-## Procesado de la matriz de cuentas
+## Procesado de la matriz de conteo
 
-Aunque en el paso anterior se ha generado una matriz de cuentas, se debe tener en cuenta los posteriores análisis a realizar. En ellos, se deberán realizar una serie de cálculos sobre la matriz, por ello, será necesario que esta cumpla con algunas condiciones:
+Aunque en el paso anterior se ha generado una matriz de conteo, se debe tener en cuenta los posteriores análisis a realizar. En ellos, se deberán realizar una serie de cálculos sobre la matriz, por ello, será necesario que esta cumpla con algunas condiciones:
 
-1. Los genes o marcadores deberán encontrarse en las columnas de la matriz, dado que serán las variables de estudio.
+1. Los genes o biomarcadores deberán encontrarse en las columnas de la matriz, dado que serán las variables de estudio.
 1. La matriz debe de contener una variable binaria que represente la variable a predecir e.g. si la muestra proviene de un paciente enfermo o no.
 
 ### Pivotado de la matriz
@@ -252,7 +252,7 @@ tcga_data <- tcga_data %>%
     )
 ```
 
-Es importante considerar que en pasos posteriores se deberá trabajar con variables binarias, por ello que se requerirá realizar transformaciones adicionales. En primer lugar, se buscará trabajar con marcadores de diagnóstico. Los marcadores de este tipo deberían ser capaces de diferenciar o clasificar entre pacientes sanos y enfermos, por ello, se utilizará la información de la variable `malignancy` para generar una variable que represente estas condiciones. Esta variable será `disease` que, utilizando la función `forcats::fct_collapse`, compactará los valores de `malignancy` de `High Malignancy` y `Low Malignancy` en 1 (enfermos), y valores de `Normal` en 0 (sanos). 
+Es importante considerar que en pasos posteriores se deberá trabajar con variables binarias, por ello que se requerirá realizar transformaciones adicionales. En primer lugar, se buscará trabajar con biomarcadores de diagnóstico. Los biomarcadores de este tipo deberían ser capaces de diferenciar o clasificar entre pacientes sanos y enfermos, por ello, se utilizará la información de la variable `malignancy` para generar una variable que represente estas condiciones. Esta variable será `disease` que, utilizando la función `forcats::fct_collapse`, compactará los valores de `malignancy` de `High Malignancy` y `Low Malignancy` en 1 (enfermos), y valores de `Normal` en 0 (sanos). 
 
 
 ```r
@@ -266,7 +266,7 @@ tcga_data <- tcga_data %>%
     )
 ```
 
-En segundo lugar, se tratará de buscar marcadores de pronóstico o estratificación de riesgo. Los marcadores de este tipo deberían ser capaces de distinguir entre pacientes donde la enfermedad es menos probable que progrese frente a pacientes donde es más probable que lo haga, es decir un cáncer de crecimiento lento y menos agresivo frente a uno de crecimiento rápido y mayor agresividad. En este caso, se realizará un procedimiento similar creando la variable `prognostic`, donde 0 se corresponderá con valores de `Low Malignancy` y de 1 con `High Malignancy`[^4].
+En segundo lugar, se tratará de buscar biomarcadores de pronóstico o estratificación de riesgo. Los biomarcadores de este tipo deberían ser capaces de distinguir entre pacientes donde la enfermedad es menos probable que progrese frente a pacientes donde es más probable que lo haga, es decir un cáncer de crecimiento lento y menos agresivo frente a uno de crecimiento rápido y mayor agresividad. En este caso, se realizará un procedimiento similar creando la variable `prognostic`, donde 0 se corresponderá con valores de `Low Malignancy` y de 1 con `High Malignancy`[^4].
 
 
 ```r
@@ -280,12 +280,12 @@ tcga_data <- tcga_data %>%
     )
 ```
 
-Una vez generada la matriz con los genes y variables a predecir, el conjunto de datos está preparado para realizar los análisis pertinentes. Sin embargo, dado que anteriormente se han seleccionado marcadores relevantes de la enfermedad (sección \@ref(cancer-cells-selection)), será posible utilizarlos para filtrar el conjunto de datos, de esta forma se logra:
+Una vez generada la matriz con los genes y variables a predecir, el conjunto de datos está preparado para realizar los análisis pertinentes. Sin embargo, dado que anteriormente se han seleccionado biomarcadores relevantes de la enfermedad (sección \@ref(cancer-cells-selection)), será posible utilizarlos para filtrar el conjunto de datos, de esta forma se logra:
 
-+ **Aumento de precisión**\. Los experimentos de RNA-seq muestran perfiles transcripcionales promedios de todas las células de la muestra. Esto incluye células epiteliales, fibroblastos, células musculares, etc. Por este motivo, realizar un filtrado con los marcadores seleccionados en experimentos de scRNA-seq, permite seleccionar solamente aquellas células de interés para la enfermedad.
++ **Aumento de precisión**\. Los experimentos de RNA-seq muestran perfiles transcripcionales promedios de todas las células de la muestra. Esto incluye células epiteliales, fibroblastos, células musculares, etc. Por este motivo, realizar un filtrado con los biomarcadores seleccionados en experimentos de scRNA-seq, permite seleccionar solamente aquellas células de interés para la enfermedad.
 + **Reducción del tamaño del conjunto de datos**\. Los análisis aguas abajo son exigentes a nivel computacional, por lo que una reducción del conjunto de datos acelera en gran medida el proceso.
 
-Así, en pasos posteriores, se realizará este filtrado usando los datos provenientes de experimentos de scRNA-seq, para finalmente realizar el análisis de los marcadores seleccionados de forma más óptima.
+Así, en pasos posteriores, se realizará este filtrado usando los datos provenientes de experimentos de scRNA-seq, para finalmente realizar el análisis de los biomarcadores seleccionados de forma más óptima.
 
 
 

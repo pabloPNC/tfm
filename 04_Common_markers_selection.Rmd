@@ -1,6 +1,6 @@
-# Filtrado de la matriz de cuentas {#count-matrix-filtering}
+# Filtrado de la matriz de conteo {#count-matrix-filtering}
 
-En esta parte del trabajo se realizará un filtrado de la matriz generada en la sección anterior (sección \@ref(count-matrix-generation)). Para este paso, se utilizarán los marcadores seleccionados de experimentos de scRNA-seq (sección \@ref(cancer-cells-selection)), reduciendo así el tamaño y ruido presente en los datos lo que facilitará los análisis posteriores.
+En esta parte del trabajo se realizará un filtrado de la matriz generada en la sección anterior (sección \@ref(count-matrix-generation)). Para este paso, se utilizarán los biomarcadores seleccionados de experimentos de scRNA-seq (sección \@ref(cancer-cells-selection)), reduciendo así el tamaño y ruido presente en los datos lo que facilitará los análisis posteriores.
 
 ```{r Importar librerías, include=FALSE, warning=FALSE}
 library(biomaRt)
@@ -16,7 +16,7 @@ tcga_data <- readRDS("./rds_objects/03_tcga_data.rds")
 
 ## Equivalencias entre identificadores
 
-Los formas para identificar los marcadores en los experimentos de scRNA-seq y los provenientes de TCGA son distintas. Los primeros utilizan el acrónimo del gen, mientras que los segundos utilizan identificadores de [Ensembl](https://www.ensembl.org/index.html). 
+Los formas para identificar los biomarcadores en los experimentos de scRNA-seq y los provenientes de TCGA son distintas. Los primeros utilizan el acrónimo del gen, mientras que los segundos utilizan identificadores de [Ensembl](https://www.ensembl.org/index.html). 
 
 Para realizar el filtrado se deberán encontrar equivalencias entre los acrónimos e identificadores de Ensembl. Esta tarea es posible utilizando el paquete `biomaRt`[@R-biomaRt], el cual permite acceder a diversos portales de información entre los que se encuentra Ensembl. En primer lugar, se usará la función `biomaRt::useEnsembl` para seleccionar la base de datos a la que acceder, en este caso `genes`, y el conjunto de datos a utilizar, en este caso `hsapiens_gene_ensembl`, es decir genes de humanos.
 
@@ -63,7 +63,7 @@ kableExtra::kbl(
 ) %>% kableExtra::kable_styling()
 ```
 
-Generada la tabla de equivalencias, es conveniente comprobar que los marcadores seleccionados se encuentran en ella. De esta de forma, se asegura que sea posible asignarles un identificador. Realizando la intersección (`dplyr::intersect`) y la diferencia (`dplyir::setdiff`) entre los marcadores seleccionados y genes en la tabla de equivalencias, es posible identificar los genes que se han encontrado en la base de datos y los faltantes.
+Generada la tabla de equivalencias, es conveniente comprobar que los biomarcadores seleccionados se encuentran en ella. De esta de forma, se asegura que sea posible asignarles un identificador. Realizando la intersección (`dplyr::intersect`) y la diferencia (`dplyir::setdiff`) entre los biomarcadores seleccionados y genes en la tabla de equivalencias, es posible identificar los genes que se han encontrado en la base de datos y los faltantes.
 
 ```{r Genes encontrados y no encontrados}
 missing_genes <- setdiff(markers_cluster_8$gene, id_equivalences$acronym)
@@ -114,11 +114,13 @@ test_markers <- finded_markers %>%
     filter(n() > 1) %>%
     arrange(ensembl_gene_id)
 
+
 kableExtra::kbl(
     finded_markers %>%
         group_by(ensembl_gene_id) %>%
         filter(n() > 1) %>%
-        arrange(ensembl_gene_id)
+        arrange(ensembl_gene_id) %>%
+        mutate(across(c(p_val, p_val_adj), ~ tibble::num(.x, digits = 3, notation = "sci")))
 ) %>% kableExtra::kable_paper()
 ```
 
@@ -147,7 +149,7 @@ filtered_markers <- finded_markers %>%
 
 Una exploración más detallada de los datos muestra el caso opuesto, genes con el mismo nombre presentando 2 identificadores de ensemble distintos, e.g. **PRR4** con los identificadores: `ENSG00000111215`, `ENSG00000263247` y `ENSG00000282269`. Esta duplicidad es conveniente, puesto que es posible asegurar a que identificador se hace referencia en los experimentos. Además, no afecta negativamente, puesto que aunque posean identificadores distintos los valores de expresión para estos genes serán idénticos.
 
-Filtrados los marcadores, se podrán seleccionar los genes del conjunto de datos extraído de TCGA. Para ello, en primer lugar, se renombrarán las columnas eliminando la versión de los identificadores de ellas y los genes conteniendo "PAR_Y" en su identificador, puesto que no están expresados y pueden generar conflictos de identificadores duplicados. En segundo lugar, se seleccionarán las columnas (genes) que coincidan con los identificadores seleccionados.
+Filtrados los biomarcadores, se podrán seleccionar los genes del conjunto de datos extraído de TCGA. Para ello, en primer lugar, se renombrarán las columnas eliminando la versión de los identificadores de ellas y los genes conteniendo "PAR_Y" en su identificador, puesto que no están expresados y pueden generar conflictos de identificadores duplicados. En segundo lugar, se seleccionarán las columnas (genes) que coincidan con los identificadores seleccionados.
 
 ```{r TCGA subsetting}
 roc_data <- tcga_data %>%
@@ -172,7 +174,7 @@ markers_in_tcga <- filtered_markers[which(genes_in_tcga), ]
 length(unique(markers_in_tcga$gene))
 ```
 
-En pasos anteriores, cuando se seleccionaron los marcadores comunes entre los obtenidos en las muestras y los disponibles en Ensembl, se encontraron 2585; y de estos, 2584 se han encontrado en las muestras del TCGA. Con estos genes, será con los que se trabaje a la hora de realizar los análisis posteriores.
+En pasos anteriores, cuando se seleccionaron los biomarcadores comunes entre los obtenidos en las muestras y los disponibles en Ensembl, se encontraron 2585; y de estos, 2584 se han encontrado en las muestras del TCGA. Con estos genes, será con los que se trabaje a la hora de realizar los análisis posteriores.
 
 ```{r Serialización, include=FALSE}
 saveRDS(
