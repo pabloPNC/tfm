@@ -6,7 +6,7 @@ Este repositorio contiene los scripts utilizados para realizar el análisis de d
 
 En el repositorio se encuentran disponibles una serie de archivos que han sido utilizados para llevar a cabo este análisis.
 
-En primer lugar, se pueden encontrar una serie de archivos `*.Rmd`, los cuales contienen descritas las distintas secciones del análisis completo además del código fuente en R utilizado durante el trabajo.
+En primer lugar, se pueden encontrar una serie de archivos `*.Rmd`, los cuales contienen descritas las distintas secciones del análisis completo además del código fuente en R utilizado durante el trabajo. En concreto, bajo el directorio `/concordance_indexes`, se encuentran aquellos relacionados con los índices de concordancia, ya que al tratarse de índices más recientes no fueron incluidos en el análisis inicial.
 
 Para facilitar su lectura, estos documentos, así como los resultados del código utilizado, han sido compilados en archivos `*.html` los cuales se pueden encontrar bajo el directorio `_book/`. 
 
